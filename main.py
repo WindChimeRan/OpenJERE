@@ -28,7 +28,7 @@ parser.add_argument('--mode',
                     '-m',
                     type=str,
                     default='preprocessing',
-                    help='preprocessing|train|evaluation')
+                    help='preprocessing|train|evaluation|data_summary')
 args = parser.parse_args()
 
 
@@ -76,6 +76,7 @@ class Runner(object):
             self.evaluation()
         elif mode == 'data_summary':
             self.summary_data(self.hyper.train)
+            self.summary_data(self.hyper.dev)
         else:
             raise ValueError('invalid mode')
 
@@ -97,13 +98,17 @@ class Runner(object):
         loader = Selection_loader(data, batch_size=400, pin_memory=True)
 
         pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
+
         len_sent_list = []
         triplet_num = []
+
         for batch_ndx, sample in pbar:
             len_sent_list.extend(sample.length)
             triplet_num.extend(list(map(len, sample.spo_gold)))
-        print(sum(len_sent_list)/len(len_sent_list))
-        print(sum(triplet_num)/len(triplet_num))
+
+        print('sentence num %d' % len(len_sent_list))
+        print('avg sentence length %f' % (sum(len_sent_list)/len(len_sent_list)))
+        print('avg triplet num %f' % (sum(triplet_num)/len(triplet_num)))
 
     def evaluation(self):
         dev_set = Selection_Dataset(self.hyper, self.hyper.dev)
