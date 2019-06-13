@@ -3,15 +3,15 @@ import json
 
 import torch
 
-from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import Dataset
-
-from torch.nn.utils.rnn import pad_sequence
 
 from functools import partial
 from typing import Dict, List, Tuple, Set, Optional
 
-class Abstract_dataset(Dataset):
+from abc import ABC, abstractmethod
+
+
+class Abstract_dataset(ABC, Dataset):
     def __init__(self, hyper, dataset):
         self.hyper = hyper
         self.data_root = hyper.data_root
@@ -22,3 +22,11 @@ class Abstract_dataset(Dataset):
             open(os.path.join(self.data_root, 'relation_vocab.json'), 'r'))
         self.bio_vocab = json.load(
             open(os.path.join(self.data_root, 'bio_vocab.json'), 'r'))
+
+    @abstractmethod
+    def __getitem__(self, index):
+        pass
+
+    @abstractmethod
+    def __len__(self):
+        pass
