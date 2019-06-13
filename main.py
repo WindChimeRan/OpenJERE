@@ -95,7 +95,7 @@ class Runner(object):
     
     def summary_data(self, dataset):
         data = Selection_Dataset(self.hyper, dataset)
-        loader = Selection_loader(data, batch_size=400, pin_memory=True)
+        loader = Selection_loader(data, batch_size=400, pin_memory=True, num_workers=8)
 
         pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
 
@@ -112,7 +112,7 @@ class Runner(object):
 
     def evaluation(self):
         dev_set = Selection_Dataset(self.hyper, self.hyper.dev)
-        loader = Selection_loader(dev_set, batch_size=400, pin_memory=True)
+        loader = Selection_loader(dev_set, batch_size=400, pin_memory=True, num_workers=8)
         self.metrics.reset()
         self.model.eval()
 
@@ -131,7 +131,7 @@ class Runner(object):
 
     def train(self):
         train_set = Selection_Dataset(self.hyper, self.hyper.train)
-        loader = Selection_loader(train_set, batch_size=100, pin_memory=True)
+        loader = Selection_loader(train_set, batch_size=100, pin_memory=True, num_workers=4)
 
         for epoch in range(self.hyper.epoch_num):
             self.model.train()
