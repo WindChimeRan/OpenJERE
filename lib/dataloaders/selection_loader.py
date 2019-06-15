@@ -11,7 +11,7 @@ from torch.nn.utils.rnn import pad_sequence
 from functools import partial
 from typing import Dict, List, Tuple, Set, Optional
 
-from .abs_dataset import Abstract_dataset
+from .abc_dataset import Abstract_dataset
 
 
 class Selection_Dataset(Abstract_dataset):

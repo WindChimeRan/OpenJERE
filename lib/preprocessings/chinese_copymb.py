@@ -48,27 +48,6 @@ class Chinese_selection_preprocessing(Chinese):
         }
         return json.dumps(result, ensure_ascii=False)
 
-    def spo_to_selection(self, text: str, spo_list: List[Dict[str, str]]
-                         ) -> List[Dict[str, int]]:
-
-        selection = []
-        for triplet in spo_list:
-
-            object = triplet['object']
-            subject = triplet['subject']
-
-            object_pos = text.find(object) + len(object) - 1
-            relation_pos = self.relation_vocab[triplet['predicate']]
-            subject_pos = text.find(subject) + len(subject) - 1
-
-            selection.append({
-                'subject': subject_pos,
-                'predicate': relation_pos,
-                'object': object_pos
-            })
-
-        return selection
-
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
         bio = ['O'] * len(text)
         for e in entities:
