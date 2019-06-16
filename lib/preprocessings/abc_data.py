@@ -29,6 +29,10 @@ class Chinese(ABC):
     def _read_line(self, line: str) -> Optional[str]:
         raise NotImplementedError('abc method!')
 
+    @abstractmethod
+    def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
+        pass
+
     @cached_property
     def relation_vocab(self):
         if os.path.exists(self.relation_vocab_path):
@@ -90,16 +94,6 @@ class Chinese(ABC):
     def gen_all_data(self):
         self._gen_one_data(self.hyper.train)
         self._gen_one_data(self.hyper.dev)
-
-    def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
-        if spo_list == []:
-            return False
-        if len(text) > self.hyper.max_text_len:
-            return False
-        for t in spo_list:
-            if t['object'] not in text or t['subject'] not in text:
-                return False
-        return True
 
     def spo_to_entities(self, text: str,
                         spo_list: List[Dict[str, str]]) -> List[str]:

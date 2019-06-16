@@ -10,9 +10,11 @@ from typing import Dict, List, Tuple, Set, Optional
 from prefetch_generator import BackgroundGenerator
 from tqdm import tqdm
 
+from collections import Counter
+
 from torch.optim import Adam, SGD
 
-from lib.preprocessings import Chinese_selection_preprocessing
+from lib.preprocessings import Chinese_selection_preprocessing, Chinese_copymb_preprocessing
 from lib.dataloaders import Selection_Dataset, Selection_loader
 from lib.metrics import F1_triplet
 from lib.models import MultiHeadSelection
@@ -22,7 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name',
                     '-e',
                     type=str,
-                    default='chinese_selection_re',
+                    default='chinese_copymb_re',
                     help='experiments/exp_name.json')
 parser.add_argument('--mode',
                     '-m',
@@ -41,7 +43,8 @@ class Runner(object):
                                         self.exp_name + '.json'))
 
         self.gpu = self.hyper.gpu
-        self.preprocessor = Chinese_selection_preprocessing(self.hyper)
+        # self.preprocessor = Chinese_selection_preprocessing(self.hyper)
+        self.preprocessor = self._preprocessor(self.hyper.model)
         self.metrics = F1_triplet()
         self.optimizer = None
         self.model = None
@@ -52,6 +55,13 @@ class Runner(object):
             'sgd': SGD(model.parameters(), lr=0.5)
         }
         return m[name]
+    
+    def _preprocessor(self, name: str):
+        p = {
+            'selection': Chinese_selection_preprocessing(self.hyper),
+            'copymb': Chinese_copymb_preprocessing(self.hyper)
+        }
+        return p[name]
 
     def _init_model(self):
         self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
@@ -109,6 +119,7 @@ class Runner(object):
         print('sentence num %d' % len(len_sent_list))
         print('avg sentence length %f' % (sum(len_sent_list)/len(len_sent_list)))
         print('avg triplet num %f' % (sum(triplet_num)/len(triplet_num)))
+        print(Counter(triplet_num))
 
     def evaluation(self):
         dev_set = Selection_Dataset(self.hyper, self.hyper.dev)

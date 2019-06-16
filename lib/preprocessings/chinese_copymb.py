@@ -6,13 +6,16 @@ from collections import Counter
 from typing import Dict, List, Tuple, Set, Optional
 
 from cached_property import cached_property
+from overrides import overrides
 
 from lib.preprocessings.abc_data import Chinese
 
-class Chinese_selection_preprocessing(Chinese):
-    def __init__(self, hyper):
-        super(Chinese_selection_preprocessing, self).__init__(hyper)
 
+class Chinese_copymb_preprocessing(Chinese):
+    def __init__(self, hyper):
+        super(Chinese_copymb_preprocessing, self).__init__(hyper)
+
+    @overrides
     def _read_line(self, line: str) -> Optional[str]:
         line = line.strip("\n")
         if not line:
@@ -21,7 +24,6 @@ class Chinese_selection_preprocessing(Chinese):
         text = instance['text']
 
         bio = None
-        selection = None
 
         if 'spo_list' in instance:
             spo_list = instance['spo_list']
@@ -38,15 +40,53 @@ class Chinese_selection_preprocessing(Chinese):
             relations: List[str] = self.spo_to_relations(text, spo_list)
 
             bio = self.spo_to_bio(text, entities)
-            selection = self.spo_to_selection(text, spo_list)
+            seq = self.spo_to_seq(text, spo_list)
 
         result = {
             'text': text,
             'spo_list': spo_list,
             'bio': bio,
-            'selection': selection
+            'seq': seq
         }
         return json.dumps(result, ensure_ascii=False)
+
+    @overrides
+    def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
+        if spo_list == []:
+            return False
+        if len(text) > self.hyper.max_text_len:
+            return False
+
+        if len(set([t['subject'] for t in spo_list])) > self.hyper.max_decode_len:
+            return False
+
+        for t in spo_list:
+            if t['object'] not in text or t['subject'] not in text:
+                return False
+        return True
+
+    def spo_to_seq(self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True) -> Dict[int, int]:
+        dic = {}
+        for triplet in spo_list:
+
+            object = triplet['object']
+            subject = triplet['subject']
+
+            object_pos = text.find(object) + len(object) - 1
+            relation_pos = self.relation_vocab[triplet['predicate']]
+            subject_pos = text.find(subject) + len(subject) - 1
+
+            # dangerous!!!
+            # ------------------------------------------------- #
+            if not s_fst:
+                object_pos, subject_pos = subject_pos, object_pos
+            # ------------------------------------------------- #
+
+            if object_pos in dic:
+                dic[object_pos].extend([relation_pos, subject_pos])
+            else:
+                dic[object_pos] = [relation_pos, subject_pos]
+        return dic
 
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
         bio = ['O'] * len(text)

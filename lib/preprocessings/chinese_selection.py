@@ -4,15 +4,18 @@ import numpy as np
 
 from collections import Counter
 from typing import Dict, List, Tuple, Set, Optional
+from overrides import overrides
 
 from cached_property import cached_property
 
 from lib.preprocessings.abc_data import Chinese
 
+
 class Chinese_selection_preprocessing(Chinese):
     def __init__(self, hyper):
         super(Chinese_selection_preprocessing, self).__init__(hyper)
 
+    @overrides
     def _read_line(self, line: str) -> Optional[str]:
         line = line.strip("\n")
         if not line:
@@ -47,6 +50,17 @@ class Chinese_selection_preprocessing(Chinese):
             'selection': selection
         }
         return json.dumps(result, ensure_ascii=False)
+
+    @overrides
+    def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
+        if spo_list == []:
+            return False
+        if len(text) > self.hyper.max_text_len:
+            return False
+        for t in spo_list:
+            if t['object'] not in text or t['subject'] not in text:
+                return False
+        return True
 
     def spo_to_selection(self, text: str, spo_list: List[Dict[str, str]]
                          ) -> List[Dict[str, int]]:

@@ -1,5 +1,6 @@
 import json
 
+from typing import Optional
 from dataclasses import dataclass
 
 @dataclass
@@ -15,6 +16,9 @@ class Hyper(object):
         self.print_epoch: int
         self.evaluation_epoch: int
         self.max_text_len: int
+        # max_decode_len for copymb is per-token wise
+        #                for copyre is per-sentence wise
+        self.max_decode_len: Optional[int]
         self.cell_name: str
         self.emb_size: int
         self.rel_emb_size: int
