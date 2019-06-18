@@ -62,6 +62,11 @@ class Chinese_selection_preprocessing(Chinese):
                 return False
         return True
 
+    @overrides
+    def gen_vocab(self, min_freq: int):
+        super(Chinese_selection_preprocessing, self).gen_vocab(min_freq, init_result={'<pad>': 0})
+
+
     def spo_to_selection(self, text: str, spo_list: List[Dict[str, str]]
                          ) -> List[Dict[str, int]]:
 

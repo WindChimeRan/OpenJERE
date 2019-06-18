@@ -59,7 +59,9 @@ class Chinese(ABC):
                   open(self.relation_vocab_path, 'w'),
                   ensure_ascii=False)
 
-    def gen_vocab(self, min_freq: int):
+    @abstractmethod
+    def gen_vocab(self, min_freq: int, init_result: Dict[str, int]):
+        # might contain sos, eos, pad ....
         source = os.path.join(self.raw_data_root, self.hyper.train)
         target = os.path.join(self.data_root, 'word_vocab.json')
 
@@ -72,8 +74,11 @@ class Chinese(ABC):
                 instance = json.loads(line)
                 text = list(instance['text'])
                 cnt.update(text)
-        result = {'<pad>': 0}
-        i = 1
+        result = init_result
+        i = len(init_result)
+        assert max(init_result.values()) == i - 1
+        # result = {'<pad>': 0}
+        # i = 1
         for k, v in cnt.items():
             if v > min_freq:
                 result[k] = i

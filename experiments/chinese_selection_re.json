@@ -1,6 +1,6 @@
 {
     "dataset": "chinese",
-    "model": "multi_head_selection",
+    "model": "selection",
     "data_root": "data/chinese/multi_head_selection",
     "raw_data_root": "raw_data/chinese",
     "train": "train_data.json",

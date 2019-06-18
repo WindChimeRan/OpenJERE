@@ -64,20 +64,18 @@ class Copymb_Dataset(Abstract_dataset):
                            (self.hyper.max_text_len - len(bio)))
         return torch.tensor(padded_list)
 
-    def seq2tensor(self, text, selection):
+    def seq2tensor(self, text, seq):
         # s p o
         result = torch.zeros(
             (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1))
         NA = self.relation_vocab['N']
-        result[:, NA, :] = 1
-        for triplet in selection:
-
-            object = triplet['object']
-            subject = triplet['subject']
-            predicate = triplet['predicate']
-
-            result[subject, predicate, object] = 1
-            result[subject, NA, object] = 0
+        for i in range(self.hyper.max_text_len):
+            if str(i) not in seq:
+                seq[str(i), 0] = NA 
+        for s, pair in seq.items():
+            for i, ptr in enumerate(pair):
+                result[int(s), i] = ptr
+            result[int(s), i + 1] = NA
 
         return result
 
@@ -85,11 +83,11 @@ class Copymb_Dataset(Abstract_dataset):
 class Batch_reader(object):
     def __init__(self, data):
         transposed_data = list(zip(*data))
-        # tokens_id, bio_id, selection_id, spo, text, bio
+        # tokens_id, bio_id, seq_id, spo, text, bio
 
         self.tokens_id = pad_sequence(transposed_data[0], batch_first=True)
         self.bio_id = pad_sequence(transposed_data[1], batch_first=True)
-        self.selection_id = torch.stack(transposed_data[2], 0)
+        self.seq_id = torch.stack(transposed_data[2], 0)
 
         self.length = transposed_data[3]
 
@@ -100,7 +98,7 @@ class Batch_reader(object):
     def pin_memory(self):
         self.tokens_id = self.tokens_id.pin_memory()
         self.bio_id = self.bio_id.pin_memory()
-        self.selection_id = self.selection_id.pin_memory()
+        self.seq_id = self.seq_id.pin_memory()
         return self
 
 
@@ -108,5 +106,5 @@ def collate_fn(batch):
     return Batch_reader(batch)
 
 
-Copymb_Dataset_loader = partial(
+Copymb_loader = partial(
     DataLoader, collate_fn=collate_fn, pin_memory=True)

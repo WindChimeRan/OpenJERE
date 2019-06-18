@@ -15,7 +15,7 @@ from collections import Counter
 from torch.optim import Adam, SGD
 
 from lib.preprocessings import Chinese_selection_preprocessing, Chinese_copymb_preprocessing
-from lib.dataloaders import Selection_Dataset, Selection_loader
+from lib.dataloaders import Selection_Dataset, Selection_loader, Copymb_Dataset, Copymb_loader
 from lib.metrics import F1_triplet
 from lib.models import MultiHeadSelection
 from lib.config import Hyper
@@ -48,6 +48,21 @@ class Runner(object):
         self.metrics = F1_triplet()
         self.optimizer = None
         self.model = None
+        
+        self.Dataset = None
+        self.Loader = None
+        self._init_loader(self.hyper.model)
+
+    
+    def _init_loader(self, name):
+        if name == 'selection':
+            self.Loader = Selection_loader
+            self.Dataset = Selection_Dataset
+        elif name == 'copymb':
+            self.Dataset = Copymb_Dataset
+            self.Loader = Copymb_loader
+        else:
+            raise ValueError('wrong name!')
 
     def _optimizer(self, name, model):
         m = {
@@ -64,7 +79,12 @@ class Runner(object):
         return p[name]
 
     def _init_model(self):
-        self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
+        if self.hyper.model == 'selection':
+            self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
+        elif self.hyper.model == 'copymb':
+            self.model = None
+        else:
+            raise NotImplementedError('Future works!')
 
     def preprocessing(self):
         self.preprocessor.gen_relation_vocab()
@@ -104,8 +124,8 @@ class Runner(object):
             os.path.join(self.model_dir, self.exp_name + '_' + str(epoch)))
     
     def summary_data(self, dataset):
-        data = Selection_Dataset(self.hyper, dataset)
-        loader = Selection_loader(data, batch_size=400, pin_memory=True, num_workers=8)
+        data = self.Dataset(self.hyper, dataset)
+        loader = self.Loader(data, batch_size=400, pin_memory=True, num_workers=8)
 
         pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
 
@@ -122,8 +142,8 @@ class Runner(object):
         print(Counter(triplet_num))
 
     def evaluation(self):
-        dev_set = Selection_Dataset(self.hyper, self.hyper.dev)
-        loader = Selection_loader(dev_set, batch_size=400, pin_memory=True, num_workers=8)
+        dev_set = self.Dataset(self.hyper, self.hyper.dev)
+        loader = self.Loader(dev_set, batch_size=400, pin_memory=True, num_workers=8)
         self.metrics.reset()
         self.model.eval()
 
@@ -141,8 +161,8 @@ class Runner(object):
             ]) + " ||")
 
     def train(self):
-        train_set = Selection_Dataset(self.hyper, self.hyper.train)
-        loader = Selection_loader(train_set, batch_size=100, pin_memory=True, num_workers=4)
+        train_set = self.Dataset(self.hyper, self.hyper.train)
+        loader = self.Loader(train_set, batch_size=100, pin_memory=True, num_workers=4)
 
         for epoch in range(self.hyper.epoch_num):
             self.model.train()

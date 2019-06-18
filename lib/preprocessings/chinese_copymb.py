@@ -30,17 +30,17 @@ class Chinese_copymb_preprocessing(Chinese):
 
             if not self._check_valid(text, spo_list):
                 return None
-            spo_list = [{
-                'predicate': spo['predicate'],
-                'object': spo['object'],
-                'subject': spo['subject']
-            } for spo in spo_list]
+
+            seq = self.spo_to_seq(text, spo_list)
+
+            if not self._check_seq(seq):
+                return None
 
             entities: List[str] = self.spo_to_entities(text, spo_list)
             relations: List[str] = self.spo_to_relations(text, spo_list)
 
             bio = self.spo_to_bio(text, entities)
-            seq = self.spo_to_seq(text, spo_list)
+            
 
         result = {
             'text': text,
@@ -51,19 +51,32 @@ class Chinese_copymb_preprocessing(Chinese):
         return json.dumps(result, ensure_ascii=False)
 
     @overrides
+    def gen_vocab(self, min_freq: int):
+        super(Chinese_copymb_preprocessing, self).gen_vocab(
+            min_freq, init_result={'<pad>': 0, '<eos>': 1})
+
+    @overrides
     def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
         if spo_list == []:
             return False
         if len(text) > self.hyper.max_text_len:
             return False
 
-        if len(set([t['subject'] for t in spo_list])) > self.hyper.max_decode_len:
+        # if len(set([t['subject'] for t in spo_list])) > self.hyper.max_decode_len:
+        #     return False
+        if max(Counter([t['subject'] for t in spo_list]).values()) > self.hyper.max_decode_len:
             return False
 
         for t in spo_list:
             if t['object'] not in text or t['subject'] not in text:
                 return False
         return True
+
+    def _check_seq(self, seq):
+        if max(map(len, seq.values())) > self.hyper.max_decode_len * 2:
+            return False
+        else:
+            return True
 
     def spo_to_seq(self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True) -> Dict[int, int]:
         dic = {}
@@ -79,13 +92,16 @@ class Chinese_copymb_preprocessing(Chinese):
             # dangerous!!!
             # ------------------------------------------------- #
             if not s_fst:
+                # ops (default spo)
                 object_pos, subject_pos = subject_pos, object_pos
             # ------------------------------------------------- #
 
-            if object_pos in dic:
-                dic[object_pos].extend([relation_pos, subject_pos])
+            if subject_pos in dic:
+                dic[subject_pos].extend([relation_pos, object_pos])
             else:
-                dic[object_pos] = [relation_pos, subject_pos]
+                dic[subject_pos] = [relation_pos, object_pos]
+        # if max(map(len, dic.values())) > self.hyper.max_decode_len * 2:
+        #     print(dic)
         return dic
 
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
