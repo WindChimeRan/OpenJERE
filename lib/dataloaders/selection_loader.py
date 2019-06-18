@@ -87,8 +87,10 @@ class Batch_reader(object):
         transposed_data = list(zip(*data))
         # tokens_id, bio_id, selection_id, spo, text, bio
 
-        self.tokens_id = pad_sequence(transposed_data[0], batch_first=True)
-        self.bio_id = pad_sequence(transposed_data[1], batch_first=True)
+        # self.tokens_id = pad_sequence(transposed_data[0], batch_first=True)
+        # self.bio_id = pad_sequence(transposed_data[1], batch_first=True)
+        self.tokens_id = torch.stack(transposed_data[0], 0)
+        self.bio_id = torch.stack(transposed_data[1], 0)
         self.selection_id = torch.stack(transposed_data[2], 0)
 
         self.length = transposed_data[3]

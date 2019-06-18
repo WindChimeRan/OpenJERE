@@ -71,7 +71,7 @@ class Copymb_Dataset(Abstract_dataset):
         NA = self.relation_vocab['N']
         for i in range(self.hyper.max_text_len):
             if str(i) not in seq:
-                seq[str(i), 0] = NA 
+                result[i, 0] = NA 
         for s, pair in seq.items():
             for i, ptr in enumerate(pair):
                 result[int(s), i] = ptr
@@ -85,8 +85,8 @@ class Batch_reader(object):
         transposed_data = list(zip(*data))
         # tokens_id, bio_id, seq_id, spo, text, bio
 
-        self.tokens_id = pad_sequence(transposed_data[0], batch_first=True)
-        self.bio_id = pad_sequence(transposed_data[1], batch_first=True)
+        self.tokens_id = torch.stack(transposed_data[0], 0)
+        self.bio_id = torch.stack(transposed_data[1], 0)
         self.seq_id = torch.stack(transposed_data[2], 0)
 
         self.length = transposed_data[3]

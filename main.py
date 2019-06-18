@@ -17,7 +17,7 @@ from torch.optim import Adam, SGD
 from lib.preprocessings import Chinese_selection_preprocessing, Chinese_copymb_preprocessing
 from lib.dataloaders import Selection_Dataset, Selection_loader, Copymb_Dataset, Copymb_loader
 from lib.metrics import F1_triplet
-from lib.models import MultiHeadSelection
+from lib.models import MultiHeadSelection, CopyMB
 from lib.config import Hyper
 
 parser = argparse.ArgumentParser()
@@ -79,10 +79,11 @@ class Runner(object):
         return p[name]
 
     def _init_model(self):
+        print(self.hyper.model)
         if self.hyper.model == 'selection':
             self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
         elif self.hyper.model == 'copymb':
-            self.model = None
+            self.model = CopyMB(self.hyper).cuda(self.gpu)
         else:
             raise NotImplementedError('Future works!')
 
@@ -162,7 +163,7 @@ class Runner(object):
 
     def train(self):
         train_set = self.Dataset(self.hyper, self.hyper.train)
-        loader = self.Loader(train_set, batch_size=100, pin_memory=True, num_workers=4)
+        loader = self.Loader(train_set, batch_size=100, pin_memory=True, num_workers=1)
 
         for epoch in range(self.hyper.epoch_num):
             self.model.train()
