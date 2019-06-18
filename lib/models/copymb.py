@@ -11,6 +11,8 @@ from functools import partial
 
 from torchcrf import CRF
 
+import torchsnooper
+
 
 class CopyMB(nn.Module):
     def __init__(self, hyper) -> None:
@@ -68,7 +70,13 @@ class CopyMB(nn.Module):
 
         self.tagger = CRF(len(self.bio_vocab) - 1, batch_first=True)
         # here the 'N' relation is used as <eos> in standard seq2seq
-        self.rel_linear = nn.Linear(hyper.hidden_size, len(self.bio_vocab))
+        self.rel_linear_1 = nn.Linear(
+            hyper.hidden_size + hyper.rel_emb_size, len(self.relation_vocab))
+        self.rel_linear_a = nn.Linear(
+            hyper.hidden_size + hyper.rel_emb_size, hyper.hidden_size)
+        self.rel_linear_b = nn.Linear(
+            hyper.hidden_size, len(self.relation_vocab))
+
         self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
@@ -112,13 +120,26 @@ class CopyMB(nn.Module):
 
         o_hid_size = o.size(-1)
 
-        hidden_idx = list(map(lambda x: x-1, length))
-        mask_for_hidden = torch.zeros_like(mask).unsqueeze(2)
-        for i, idx in enumerate(hidden_idx):
-            mask_for_hidden[i, idx] = 1
+        hidden_idx = torch.tensor(list(map(lambda x: x-1, length)), dtype=torch.long).cuda(self.gpu)
+        hidden_idx = torch.zeros_like(tokens).scatter_(
+            1, hidden_idx.unsqueeze(1), 1).to(torch.uint8)
 
-        h = torch.masked_select(o, mask=mask_for_hidden).view(-1, o_hid_size)
-        
+        # mask_for_hidden = torch.zeros_like(mask).unsqueeze(2)
+        # for i, idx in enumerate(hidden_idx):
+        #     mask_for_hidden[i, idx] = 1
+
+        h = o[hidden_idx]
+        # h = torch.masked_select(o, mask=mask_for_hidden).view(-1, o_hid_size)
+        # h = h.unsqueeze(1).expand(-1, self.hyper.max_text_len, -1).contiguous().view(-1, o_hid_size)
+        seq_gold = seq_gold.view(-1, 2 * self.hyper.max_decode_len + 1)
+        decoder_input = o.view(-1, o_hid_size)
+
+        print(h.size())
+        # indirect
+        # h = self.rel_linear_a(h)
+        # decoder_o, decoder_state = self.decoder(decoder_input, h)
+        # print(decoder_o.size())
+        exit()
         # forward copymb decoder
         # if train
         # TODO
