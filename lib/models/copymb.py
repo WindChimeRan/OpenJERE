@@ -12,6 +12,7 @@ from functools import partial
 from torchcrf import CRF
 
 import torchsnooper
+from pytorch_memlab import profile
 
 
 class CopyMB(nn.Module):
@@ -86,7 +87,8 @@ class CopyMB(nn.Module):
 
         self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
         self.ce = nn.CrossEntropyLoss(reduction='none')
-
+    
+    # @profile
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
         tokens = sample.tokens_id.cuda(self.gpu)
@@ -151,7 +153,8 @@ class CopyMB(nn.Module):
                 i, h, decoder_input, copy_o)
             step_loss, mask_items = self.masked_NLLloss(
                 mask[:, i], output_logits, seq_gold[:, i])
-            decoder_loss += step_loss.sum() / mask_items
+
+            decoder_loss += step_loss.sum() / 1
             # TODO mask
             # decoder_loss += step_loss
 
@@ -159,7 +162,6 @@ class CopyMB(nn.Module):
         # h = self.rel_linear_a(h)
         # decoder_o, decoder_state = self.decoder(decoder_input, h)
         # print(decoder_o.size())
-        exit()
         # forward copymb decoder
         # if train
         # TODO
@@ -209,6 +211,7 @@ class CopyMB(nn.Module):
         return decoder_input, decoder_state, output_logits
 
     def masked_NLLloss(self, mask, output_logits, seq_gold):
-        loss = self.ce(output_logits, seq_gold) * mask
-        mask_items = mask.sum()
+        # TODO: mask
+        loss = self.ce(output_logits, seq_gold)
+        mask_items = None
         return loss, mask_items

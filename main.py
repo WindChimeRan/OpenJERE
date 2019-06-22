@@ -48,12 +48,11 @@ class Runner(object):
         self.metrics = F1_triplet()
         self.optimizer = None
         self.model = None
-        
+
         self.Dataset = None
         self.Loader = None
         self._init_loader(self.hyper.model)
 
-    
     def _init_loader(self, name):
         if name == 'selection':
             self.Loader = Selection_loader
@@ -70,7 +69,7 @@ class Runner(object):
             'sgd': SGD(model.parameters(), lr=0.5)
         }
         return m[name]
-    
+
     def _preprocessor(self, name: str):
         p = {
             'selection': Chinese_selection_preprocessing(self.hyper),
@@ -123,10 +122,11 @@ class Runner(object):
         torch.save(
             self.model.state_dict(),
             os.path.join(self.model_dir, self.exp_name + '_' + str(epoch)))
-    
+
     def summary_data(self, dataset):
         data = self.Dataset(self.hyper, dataset)
-        loader = self.Loader(data, batch_size=400, pin_memory=True, num_workers=8)
+        loader = self.Loader(data, batch_size=400,
+                             pin_memory=True, num_workers=8)
 
         pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
 
@@ -138,13 +138,15 @@ class Runner(object):
             triplet_num.extend(list(map(len, sample.spo_gold)))
 
         print('sentence num %d' % len(len_sent_list))
-        print('avg sentence length %f' % (sum(len_sent_list)/len(len_sent_list)))
+        print('avg sentence length %f' %
+              (sum(len_sent_list)/len(len_sent_list)))
         print('avg triplet num %f' % (sum(triplet_num)/len(triplet_num)))
         print(Counter(triplet_num))
 
     def evaluation(self):
         dev_set = self.Dataset(self.hyper, self.hyper.dev)
-        loader = self.Loader(dev_set, batch_size=400, pin_memory=True, num_workers=8)
+        loader = self.Loader(dev_set, batch_size=self.hyper.batch_size_eval,
+                             pin_memory=True, num_workers=8)
         self.metrics.reset()
         self.model.eval()
 
@@ -163,7 +165,8 @@ class Runner(object):
 
     def train(self):
         train_set = self.Dataset(self.hyper, self.hyper.train)
-        loader = self.Loader(train_set, batch_size=100, pin_memory=True, num_workers=1)
+        loader = self.Loader(
+            train_set, batch_size=self.hyper.batch_size_train, pin_memory=True, num_workers=1)
 
         for epoch in range(self.hyper.epoch_num):
             self.model.train()
