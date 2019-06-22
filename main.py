@@ -29,7 +29,7 @@ parser.add_argument('--exp_name',
 parser.add_argument('--mode',
                     '-m',
                     type=str,
-                    default='preprocessing',
+                    default='train',
                     help='preprocessing|train|evaluation|data_summary')
 args = parser.parse_args()
 

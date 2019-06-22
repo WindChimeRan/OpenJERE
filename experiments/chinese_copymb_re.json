@@ -10,7 +10,7 @@
     "evaluation_epoch":27,
     "max_text_len": 100,
     "max_decode_len": 6,
-    "cell_name": "lstm",
+    "cell_name": "gru",
     "emb_size": 300,
     "rel_emb_size": 50,
     "hidden_size": 300,

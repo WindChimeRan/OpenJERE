@@ -67,7 +67,7 @@ class Copymb_Dataset(Abstract_dataset):
     def seq2tensor(self, text, seq):
         # s p o
         result = torch.zeros(
-            (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1))
+            (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1)).long()
         NA = self.relation_vocab['N']
         for i in range(self.hyper.max_text_len):
             if str(i) not in seq:
