@@ -11,6 +11,8 @@ from functools import partial
 
 from torchcrf import CRF
 
+from lib.metrics import F1_triplet
+
 
 class MultiHeadSelection(nn.Module):
     def __init__(self, hyper) -> None:
@@ -29,11 +31,11 @@ class MultiHeadSelection(nn.Module):
 
         self.word_embeddings = nn.Embedding(num_embeddings=len(
             self.word_vocab),
-                                            embedding_dim=hyper.emb_size)
+            embedding_dim=hyper.emb_size)
 
         self.relation_emb = nn.Embedding(num_embeddings=len(
             self.relation_vocab),
-                                         embedding_dim=hyper.rel_emb_size)
+            embedding_dim=hyper.rel_emb_size)
         # bio + pad
         self.bio_emb = nn.Embedding(num_embeddings=len(self.bio_vocab),
                                     embedding_dim=hyper.rel_emb_size)
@@ -69,7 +71,8 @@ class MultiHeadSelection(nn.Module):
         # remove <pad>
         self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
 
-        # self.accuracy = F1Selection()
+        self.metrics = F1_triplet()
+        self.get_metric = self.metrics.get_metric
 
     def inference(self, mask, text_list, decoded_tag, selection_logits):
         selection_mask = (mask.unsqueeze(2) *
@@ -220,5 +223,6 @@ class MultiHeadSelection(nn.Module):
             result[b].append(triplet)
         return result
 
-    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        pass
+    #@overrides
+    def run_metrics(self, output):
+        self.metrics(output['selection_triplets'], output['spo_gold'])

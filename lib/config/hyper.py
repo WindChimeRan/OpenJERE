@@ -22,6 +22,7 @@ class Hyper(object):
         self.cell_name: str
         self.emb_size: int
         self.rel_emb_size: int
+        self.bio_emb_size: int
         self.hidden_size: int
         self.threshold: float
         self.activation: str

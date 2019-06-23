@@ -146,8 +146,8 @@ class Runner(object):
     def evaluation(self):
         dev_set = self.Dataset(self.hyper, self.hyper.dev)
         loader = self.Loader(dev_set, batch_size=self.hyper.batch_size_eval,
-                             pin_memory=True, num_workers=8)
-        self.metrics.reset()
+                             pin_memory=True, num_workers=1)
+        self.model.metrics.reset()
         self.model.eval()
 
         pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
@@ -155,9 +155,9 @@ class Runner(object):
         with torch.no_grad():
             for batch_ndx, sample in pbar:
                 output = self.model(sample, is_train=False)
-                self.metrics(output['selection_triplets'], output['spo_gold'])
+                self.model.run_metrics(output)
 
-            result = self.metrics.get_metric()
+            result = self.model.get_metric()
             print(', '.join([
                 "%s: %.4f" % (name, value)
                 for name, value in result.items() if not name.startswith("_")
@@ -180,6 +180,10 @@ class Runner(object):
                 loss = output['loss']
                 loss.backward()
                 self.optimizer.step()
+                
+                # temp
+                # self.save_model(epoch)
+                # exit()
 
                 pbar.set_description(output['description'](
                     epoch, self.hyper.epoch_num))

@@ -39,7 +39,7 @@ class CopyMB(nn.Module):
             embedding_dim=hyper.rel_emb_size)
         # bio + pad
         self.bio_emb = nn.Embedding(num_embeddings=len(self.bio_vocab),
-                                    embedding_dim=hyper.rel_emb_size)
+                                    embedding_dim=hyper.bio_emb_size)
 
         if hyper.cell_name == 'gru':
             self.encoder = nn.GRU(hyper.emb_size,
@@ -72,18 +72,18 @@ class CopyMB(nn.Module):
         self.tagger = CRF(len(self.bio_vocab) - 1, batch_first=True)
         # here the 'N' relation is used as <eos> in standard seq2seq
         self.rel_linear_1 = nn.Linear(
-            hyper.hidden_size + hyper.rel_emb_size, len(self.relation_vocab))
+            hyper.hidden_size + hyper.bio_emb_size, len(self.relation_vocab))
         self.rel_linear_a = nn.Linear(
-            hyper.hidden_size + hyper.rel_emb_size, hyper.hidden_size)
+            hyper.hidden_size + hyper.bio_emb_size, hyper.hidden_size)
         self.rel_linear_b = nn.Linear(
             hyper.hidden_size, len(self.relation_vocab))
 
         self.entity_linear_1 = nn.Linear(
-            hyper.hidden_size * 2 + hyper.rel_emb_size, hyper.hidden_size)
+            hyper.hidden_size * 2 + hyper.bio_emb_size, hyper.hidden_size)
         self.entity_linear_2 = nn.Linear(hyper.hidden_size, 1)
 
-        self.sos_linear = nn.Linear(
-            hyper.hidden_size + hyper.rel_emb_size, hyper.hidden_size)
+        self.cat_linear = nn.Linear(
+            hyper.hidden_size + hyper.bio_emb_size, hyper.hidden_size)
 
         self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
         self.ce = nn.CrossEntropyLoss(reduction='none')
@@ -140,40 +140,56 @@ class CopyMB(nn.Module):
         h = o[hidden_idx]
         h = h.unsqueeze(1).expand(-1, self.hyper.max_text_len, -
                                   1).contiguous().view(1, -1, self.hyper.hidden_size).contiguous()
-        seq_gold = seq_gold.view(-1, 2 * self.hyper.max_decode_len + 1)
         decoder_sos = cat_o.view(-1, o_hid_size)
-        decoder_input = self.sos_linear(self.activation(decoder_sos))
+        decoder_input = self.cat_linear(self.activation(decoder_sos))
 
         copy_o = cat_o.unsqueeze(0).expand(self.hyper.max_text_len, -1, -1, -1).contiguous(
-        ).view(-1, self.hyper.max_text_len, self.hyper.hidden_size + self.hyper.rel_emb_size)
+        ).view(-1, self.hyper.max_text_len, self.hyper.hidden_size + self.hyper.bio_emb_size)
 
+        B, L, _ = copy_o.size()
         decoder_loss = 0
-        for i in range(self.hyper.max_decode_len * 2 + 1):
+        if is_train:
+            seq_gold = seq_gold.view(-1, 2 * self.hyper.max_decode_len + 1)
+            for i in range(self.hyper.max_decode_len * 2 + 1):
 
-            decoder_input = decoder_input.squeeze()
-            decoder_output, h, output_logits = self._decode_step(
-                i, h, decoder_input, copy_o)
+                decoder_input = decoder_input.squeeze()
+                decoder_output, h, output_logits = self._decode_step(
+                    i, h, decoder_input, copy_o)
 
-            decoder_input = seq_gold
-            # TODO!!!
-            # print(mask_decode.size(), output_logits.size(), seq_gold.size())
+                # use groundtruth
+                decoder_input = seq_gold[:, i]
+                if i % 2 == 0:
+                    decoder_input = self.relation_emb(decoder_input)
+                else:
 
-            step_loss = self.masked_NLLloss(
-                mask_decode[:, :, i], output_logits, seq_gold[:, i])
+                    copy_index = torch.zeros((B, L)).scatter_(
+                        1, decoder_input.unsqueeze(1).cpu(), 1).to(torch.uint8)
+                    decoder_input = self.cat_linear(
+                        self.activation(copy_o[copy_index]))
 
-            decoder_loss += step_loss.sum()
+                step_loss = self.masked_NLLloss(
+                    mask_decode[:, :, i], output_logits, seq_gold[:, i])
 
-        decoder_loss = decoder_loss / mask_decode.sum()
+                decoder_loss += step_loss.sum()
 
-        # if not is_train:
-        #     output['selection_triplets'] = self.inference(
-        #         mask, text_list, decoded_tag, selection_logits)
-        #     output['spo_gold'] = spo_gold
+            decoder_loss = decoder_loss / mask_decode.sum()
+        # if evaluation
+        else:
+            for i in range(self.hyper.max_decode_len * 2 + 1):
 
-        # selection_loss = 0
-        # if is_train:
-        #     selection_loss = self.masked_BCEloss(mask, selection_logits,
-        #                                          selection_gold)
+                decoder_input = decoder_input.squeeze()
+                decoder_output, h, output_logits = self._decode_step(
+                    i, h, decoder_input, copy_o)
+
+                decoder_input = torch.argmax(output_logits, dim=1).detach()
+                if i % 2 == 0:
+                    decoder_input = self.relation_emb(decoder_input)
+                else:
+
+                    copy_index = torch.zeros((B, L)).scatter_(
+                        1, decoder_input.unsqueeze(1).cpu(), 1).to(torch.uint8)
+                    decoder_input = self.cat_linear(
+                        self.activation(copy_o[copy_index]))
 
         loss = crf_loss + decoder_loss
         output['crf_loss'] = crf_loss
@@ -181,6 +197,11 @@ class CopyMB(nn.Module):
         output['loss'] = loss
 
         output['description'] = partial(self.description, output=output)
+
+        if not is_train:
+            # TODO inference
+            pass
+
         return output
 
     @staticmethod
