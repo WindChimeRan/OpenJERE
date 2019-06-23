@@ -151,16 +151,18 @@ class CopyMB(nn.Module):
         for i in range(self.hyper.max_decode_len * 2 + 1):
 
             decoder_input = decoder_input.squeeze()
-            decoder_input, h, output_logits = self._decode_step(
+            decoder_output, h, output_logits = self._decode_step(
                 i, h, decoder_input, copy_o)
-            
+
+            decoder_input = seq_gold
+            # TODO!!!
             # print(mask_decode.size(), output_logits.size(), seq_gold.size())
 
             step_loss = self.masked_NLLloss(
                 mask_decode[:, :, i], output_logits, seq_gold[:, i])
 
             decoder_loss += step_loss.sum()
-        
+
         decoder_loss = decoder_loss / mask_decode.sum()
 
         # if not is_train:
@@ -190,7 +192,7 @@ class CopyMB(nn.Module):
     def _decode_step(self, t: int, decoder_state, decoder_input, o):
 
         decoder_input = decoder_input.unsqueeze(dim=1)
-        decoder_input, decoder_state = self.decoder(
+        decoder_output, decoder_state = self.decoder(
             decoder_input, decoder_state)
 
         if t % 2 == 0:
@@ -202,7 +204,7 @@ class CopyMB(nn.Module):
             output_logits = self.entity_linear_2(self.activation(
                 self.entity_linear_1(self.activation(output_logits)))).squeeze()
 
-        return decoder_input, decoder_state, output_logits
+        return decoder_output, decoder_state, output_logits
 
     def masked_NLLloss(self, mask, output_logits, seq_gold):
 
