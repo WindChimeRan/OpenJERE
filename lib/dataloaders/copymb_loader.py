@@ -42,9 +42,9 @@ class Copymb_Dataset(Abstract_dataset):
 
         tokens_id = self.text2tensor(text)
         bio_id = self.bio2tensor(bio)
-        seq_id = self.seq2tensor(text, seq)
+        seq_id, mask_decode = self.seq2tensor(text, seq)
 
-        return tokens_id, bio_id, seq_id, len(text), spo, text, bio
+        return tokens_id, bio_id, seq_id, len(text), spo, text, bio, mask_decode
 
     def __len__(self):
         return len(self.text_list)
@@ -66,18 +66,26 @@ class Copymb_Dataset(Abstract_dataset):
 
     def seq2tensor(self, text, seq):
         # s p o
-        result = torch.zeros(
+        seq_tensor = torch.zeros(
             (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1)).long()
+
+        mask_tensor = seq_tensor.to(torch.uint8)
+
         NA = self.relation_vocab['N']
         for i in range(self.hyper.max_text_len):
             if str(i) not in seq:
-                result[i, 0] = NA 
+                seq_tensor[i, 0] = NA 
+                mask_tensor[i, 0] = 1
         for s, pair in seq.items():
             for i, ptr in enumerate(pair):
-                result[int(s), i] = ptr
-            result[int(s), i + 1] = NA
+                seq_tensor[int(s), i] = ptr
+                mask_tensor[int(s), i] = 1
+            seq_tensor[int(s), i + 1] = NA
+            mask_tensor[int(s), i + 1] = 1
+        
+        assert mask_tensor.sum() > 0
 
-        return result
+        return seq_tensor, mask_tensor
 
 
 class Batch_reader(object):
@@ -88,6 +96,7 @@ class Batch_reader(object):
         self.tokens_id = torch.stack(transposed_data[0], 0)
         self.bio_id = torch.stack(transposed_data[1], 0)
         self.seq_id = torch.stack(transposed_data[2], 0)
+        self.mask_decode = torch.stack(transposed_data[7], 0)
 
         self.length = transposed_data[3]
 
@@ -99,6 +108,7 @@ class Batch_reader(object):
         self.tokens_id = self.tokens_id.pin_memory()
         self.bio_id = self.bio_id.pin_memory()
         self.seq_id = self.seq_id.pin_memory()
+        self.mask_decode = self.mask_decode.pin_memory()
         return self
 
 

@@ -87,7 +87,7 @@ class CopyMB(nn.Module):
 
         self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
         self.ce = nn.CrossEntropyLoss(reduction='none')
-    
+
     # @profile
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
@@ -100,6 +100,8 @@ class CopyMB(nn.Module):
         spo_gold = sample.spo_gold
 
         mask = tokens != self.word_vocab['<pad>']  # batch x seq
+
+        mask_decode = sample.mask_decode.cuda(self.gpu)
 
         embedded = self.word_embeddings(tokens)
         o, _ = self.encoder(embedded)
@@ -151,29 +153,15 @@ class CopyMB(nn.Module):
             decoder_input = decoder_input.squeeze()
             decoder_input, h, output_logits = self._decode_step(
                 i, h, decoder_input, copy_o)
-            step_loss, mask_items = self.masked_NLLloss(
-                mask[:, i], output_logits, seq_gold[:, i])
+            
+            # print(mask_decode.size(), output_logits.size(), seq_gold.size())
 
-            decoder_loss += step_loss.sum() / 1
-            # TODO mask
-            # decoder_loss += step_loss
+            step_loss = self.masked_NLLloss(
+                mask_decode[:, :, i], output_logits, seq_gold[:, i])
 
-        # indirect
-        # h = self.rel_linear_a(h)
-        # decoder_o, decoder_state = self.decoder(decoder_input, h)
-        # print(decoder_o.size())
-        # forward copymb decoder
-        # if train
-        # TODO
-        # if not train
-        # TODO
-        # u = self.activation(self.selection_u(o)).unsqueeze(1)
-        # v = self.activation(self.selection_v(o)).unsqueeze(2)
-        # u = u + torch.zeros_like(v)
-        # v = v + torch.zeros_like(u)
-        # uv = self.activation(self.selection_uv(torch.cat((u, v), dim=-1)))
-        # selection_logits = torch.einsum('bijh,rh->birj', uv,
-        #                                 self.relation_emb.weight)
+            decoder_loss += step_loss.sum()
+        
+        decoder_loss = decoder_loss / mask_decode.sum()
 
         # if not is_train:
         #     output['selection_triplets'] = self.inference(
@@ -185,13 +173,19 @@ class CopyMB(nn.Module):
         #     selection_loss = self.masked_BCEloss(mask, selection_logits,
         #                                          selection_gold)
 
-        # loss = crf_loss + selection_loss
-        # output['crf_loss'] = crf_loss
-        # output['selection_loss'] = selection_loss
-        # output['loss'] = loss
+        loss = crf_loss + decoder_loss
+        output['crf_loss'] = crf_loss
+        output['decoder_loss'] = decoder_loss
+        output['loss'] = loss
 
-        # output['description'] = partial(self.description, output=output)
+        output['description'] = partial(self.description, output=output)
         return output
+
+    @staticmethod
+    def description(epoch, epoch_num, output):
+        return "L: {:.2f}, L_crf: {:.2f}, L_decode: {:.2f}, epoch: {}/{}:".format(
+            output['loss'].item(), output['crf_loss'].item(),
+            output['decoder_loss'].item(), epoch, epoch_num)
 
     def _decode_step(self, t: int, decoder_state, decoder_input, o):
 
@@ -211,7 +205,6 @@ class CopyMB(nn.Module):
         return decoder_input, decoder_state, output_logits
 
     def masked_NLLloss(self, mask, output_logits, seq_gold):
-        # TODO: mask
-        loss = self.ce(output_logits, seq_gold)
-        mask_items = None
-        return loss, mask_items
+
+        loss = self.ce(output_logits, seq_gold).masked_select(mask.view(-1))
+        return loss
