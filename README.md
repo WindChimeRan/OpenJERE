@@ -60,19 +60,19 @@ competition
 
 official data
 
-|  SKE Dataset | avg sent length | avg triplet num | sent num |
+|  SKE Dataset | Total amount |	Training set | Dev.set | Test set |
 | --------- | ------- | ------- | ------ | ----- |
 | sentence  | 214,739 | 173,108 | 21,639 |19,992 |
-| instance   | 47.46 | 2.05 | 19628  |
+| instance  | 458,184 | 364,218 | 45,577 |48,389 |
 
-train
+processed train
 
 sentence num 155228
 avg sentence length 47.062173
 avg triplet num 1.878778
 Counter({1: 72304, 2: 52066, 3: 16994, 4: 8032, 5: 3569, 6: 1904, 7: 202, 8: 75, 9: 41, 10: 19, 11: 14, 12: 7, 13: 1})
 
-dev
+processed dev
 
 sentence num 19365
 avg sentence length 47.141492
