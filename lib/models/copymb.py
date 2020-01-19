@@ -9,7 +9,8 @@ import copy
 from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 
-from torchcrf import CRF
+# from torchcrf import CRF
+from TorchCRF import CRF
 
 import torchsnooper
 from pytorch_memlab import profile

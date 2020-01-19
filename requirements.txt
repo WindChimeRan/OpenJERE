@@ -1,0 +1,10 @@
+numpy==1.16.4
+torch==1.3.0
+prefetch_generator==1.0.1
+tqdm==4.32.1
+overrides==2.5
+pytorch_memlab==0.0.4
+cached_property==1.5.1
+TorchSnooper==0.8
+dataclasses==0.7
+TorchCRF==1.0.4

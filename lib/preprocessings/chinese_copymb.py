@@ -78,7 +78,7 @@ class Chinese_copymb_preprocessing(Chinese):
         else:
             return True
 
-    def spo_to_seq(self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True) -> Dict[int, int]:
+    def spo_to_seq(self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True) -> Dict[int, List[int]]:
         dic = {}
         for triplet in spo_list:
 
