@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/raid/home/zhanghr/.pyenv/versions/anaconda3-5.3.1/bin/python",
+    "python.pythonPath": "/scratch/haoranz6/anaconda3/bin/python",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true
 }

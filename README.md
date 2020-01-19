@@ -16,14 +16,19 @@
 # Dataset
 
 ## Chinese IE
-Chinese Information Extraction Competition [link](http://lic2019.ccf.org.cn/kg)
+Competition: Chinese Information Extraction Competition [link](http://lic2019.ccf.org.cn/kg)
+
+Paper: [https://arxiv.org/abs/1904.12535](https://dl.acm.org/doi/10.1145/3159652.3159712)
+
+Download: [ai.baidu.com](https://ai.baidu.com/broad/download?dataset=saoke)
 
 Statistics:
 
 |  | avg sent length | avg triplet num | sent num |
 | ------ | ------ | ------ | ------ |
 | train | 47.41 | 2.06 | 157623 |
-| dev | 47.46 | 2.05 | 19628 |
+| dev   | 47.46 | 2.05 | 19628  |
+| saoke | ?     | ?    | 46930  |
 
 **Unzip \*.json into ./raw_data/chinese/**
 
