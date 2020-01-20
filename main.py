@@ -122,47 +122,83 @@ class Runner(object):
             self._split_cond(cond='test3', dataset=dataset)
             self._split_cond(cond='test4', dataset=dataset)
             self._split_cond(cond='test5', dataset=dataset)
+        elif dataset == 'webnlg':
+            raise NotImplementedError('webnlg')
         else:
-            raise NotImplementedError('conll/webnlg')
+            raise NotImplementedError('conll')
 
     def _split_cond(self, cond: str, dataset: str):
+
+        def read_line(line: str) -> Tuple[str, int]:
+            line = line.strip("\n")
+            if not line:
+                return None, 0
+            else:
+                instance = json.loads(line)
+                line = line + '\n'
+                triplet = instance['spo_list']
+                return line, len(triplet)
+        
         if cond == 'test':
             source = os.path.join(self.hyper.raw_data_root, 'dev_data.json')
             target = os.path.join(self.hyper.raw_data_root, 'new_test_data.json')
+            all_triplet_num = 0
+            all_sent_num = 0
             with open(source, 'r') as s, open(target, 'w') as t:
                 for line in s:
+                    line, triplet_num = read_line(line)
                     t.write(line)
-                    t.write('\n')
+                    all_triplet_num += triplet_num
+                    all_sent_num += 1
+            print('test sent %d, triplet %d' % (all_sent_num, all_triplet_num))
+
+                    
         elif cond == 'train_eval':
             source = os.path.join(self.hyper.raw_data_root, 'train_data.json')
             train = os.path.join(self.hyper.raw_data_root, 'new_train_data.json')
             validate = os.path.join(self.hyper.raw_data_root, 'new_validate_data.json')
+
+            train_sent = 0
+            train_triplet = 0
+            validate_sent = 0
+            validate_triplet = 0
+
             with open(source, 'r') as s, open(train, 'w') as t, open(validate, 'w') as v:
                 for line in s:
+                    line, triplet_num = read_line(line)
                     if random.random() < 0.9:
                         t.write(line)
-                        t.write('\n')
+                        train_sent += 1
+                        train_triplet += triplet_num
                     else:
                         v.write(line)
-                        v.write('\n')
+                        validate_sent += 1
+                        validate_triplet += triplet_num
+            print('train sent %d, triplet %d' % (train_sent, train_triplet))
+            print('validate sent %d, triplet %d' % (validate_sent, validate_triplet))
+
         elif cond in ['test1', 'test2', 'test3', 'test4', 'test5']:
             source = os.path.join(self.hyper.raw_data_root, 'dev_data.json')
             target = os.path.join(self.hyper.raw_data_root, 'new_' + cond + '.json')
+
+            all_triplet_num = 0
+            all_sent_num = 0
+
             with open(source, 'r') as s, open(target, 'w') as t:
                 for line in s:
-                    line = line.strip("\n")
-                    if not line:
-                        continue
-                    instance = json.loads(line)
-                    spo_list  = instance['spo_list']
-                    if cond == 'test5' and len(spo_list) >= 5:
+                    line, triplet_num = read_line(line)
+                    if cond == 'test5' and triplet_num >= 5:
                         t.write(line)
-                        t.write('\n')
-                    elif len(spo_list) == int(cond[-1]):
+                        all_triplet_num += triplet_num
+                        all_sent_num += 1
+                    elif triplet_num == int(cond[-1]):
                         t.write(line)
-                        t.write('\n')
+                        all_triplet_num += triplet_num
+                        all_sent_num += 1
                     else:
                         pass
+            print(cond + ' sent %d, triplet %d' % (all_sent_num, all_triplet_num))
+
 
     def load_model(self, epoch: int):
         self.model.load_state_dict(
