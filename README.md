@@ -30,11 +30,19 @@ pip install -r requirements.txt
 
 
 ```bash
-mkdir raw_data
 cd raw_data
 unzip ../raw_data_joint.zip
 ```
 
+## EWebNLG
+
+[code](https://github.com/zhijing-jin/WebNLG_Reader)
+[paper](https://www.aclweb.org/anthology/W18-6521.pdf)
+
+```bash
+cd raw_data/EWebNLG
+python data/webnlg/reader.py
+```
 
 ## Chinese IE
 Competition: Chinese Information Extraction Competition [link](http://lic2019.ccf.org.cn/kg)
