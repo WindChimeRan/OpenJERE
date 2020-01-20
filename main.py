@@ -2,6 +2,7 @@ import os
 import json
 import time
 import argparse
+import random
 
 import torch
 
@@ -30,7 +31,7 @@ parser.add_argument('--mode',
                     '-m',
                     type=str,
                     default='train',
-                    help='preprocessing|train|evaluation|data_summary')
+                    help='data_split|preprocessing|train|evaluation|data_summary')
 args = parser.parse_args()
 
 
@@ -107,8 +108,62 @@ class Runner(object):
         elif mode == 'data_summary':
             self.summary_data(self.hyper.train)
             self.summary_data(self.hyper.dev)
+        elif mode == 'data_split':
+            # chinese/conll/...
+            self.data_split(self.hyper.dataset)
         else:
             raise ValueError('invalid mode')
+
+    def data_split(self, dataset: str):
+        if dataset == 'chinese':
+            self._split_cond(cond='train_eval', dataset=dataset)
+            self._split_cond(cond='test', dataset=dataset)
+            self._split_cond(cond='test1', dataset=dataset)
+            self._split_cond(cond='test2', dataset=dataset)
+            self._split_cond(cond='test3', dataset=dataset)
+            self._split_cond(cond='test4', dataset=dataset)
+            self._split_cond(cond='test5', dataset=dataset)
+        else:
+            raise NotImplementedError('conll/webnlg')
+
+    def _split_cond(self, cond: str, dataset: str):
+        if cond == 'test':
+            source = os.path.join(self.hyper.raw_data_root, 'dev_data.json')
+            target = os.path.join(self.hyper.raw_data_root, 'new_test_data.json')
+            with open(source, 'r') as s, open(target, 'w') as t:
+                for line in s:
+                    t.write(line)
+                    t.write('\n')
+        elif cond == 'train_eval':
+            source = os.path.join(self.hyper.raw_data_root, 'train_data.json')
+            train = os.path.join(self.hyper.raw_data_root, 'new_train_data.json')
+            validate = os.path.join(self.hyper.raw_data_root, 'new_validate_data.json')
+            with open(source, 'r') as s, open(train, 'w') as t, open(validate, 'w') as v:
+                for line in s:
+                    if random.random() < 0.9:
+                        t.write(line)
+                        t.write('\n')
+                    else:
+                        v.write(line)
+                        v.write('\n')
+        elif cond in ['test1', 'test2', 'test3', 'test4', 'test5']:
+            source = os.path.join(self.hyper.raw_data_root, 'dev_data.json')
+            target = os.path.join(self.hyper.raw_data_root, 'new_' + cond + '.json')
+            with open(source, 'r') as s, open(target, 'w') as t:
+                for line in s:
+                    line = line.strip("\n")
+                    if not line:
+                        continue
+                    instance = json.loads(line)
+                    spo_list  = instance['spo_list']
+                    if cond == 'test5' and len(spo_list) >= 5:
+                        t.write(line)
+                        t.write('\n')
+                    elif len(spo_list) == int(cond[-1]):
+                        t.write(line)
+                        t.write('\n')
+                    else:
+                        pass
 
     def load_model(self, epoch: int):
         self.model.load_state_dict(
