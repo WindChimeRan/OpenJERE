@@ -50,6 +50,8 @@ class Chinese_copymb_preprocessing(Chinese):
         }
         return json.dumps(result, ensure_ascii=False)
 
+
+
     @overrides
     def gen_vocab(self, min_freq: int):
         super(Chinese_copymb_preprocessing, self).gen_vocab(

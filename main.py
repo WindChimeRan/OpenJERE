@@ -44,7 +44,6 @@ class Runner(object):
                                         self.exp_name + '.json'))
 
         self.gpu = self.hyper.gpu
-        # self.preprocessor = Chinese_selection_preprocessing(self.hyper)
         self.preprocessor = self._preprocessor(self.hyper.model)
         self.metrics = F1_triplet()
         self.optimizer = None
@@ -106,8 +105,8 @@ class Runner(object):
             self.load_model(epoch=self.hyper.evaluation_epoch)
             self.evaluation()
         elif mode == 'data_summary':
-            self.summary_data(self.hyper.train)
-            self.summary_data(self.hyper.dev)
+            for path in self.hyper.raw_data_list:
+                self.summary_data(path)
         elif mode == 'data_split':
             # chinese/conll/...
             self.data_split(self.hyper.dataset)
@@ -191,12 +190,13 @@ class Runner(object):
         for batch_ndx, sample in pbar:
             len_sent_list.extend(sample.length)
             triplet_num.extend(list(map(len, sample.spo_gold)))
-
+        print(dataset)
         print('sentence num %d' % len(len_sent_list))
         print('avg sentence length %f' %
               (sum(len_sent_list)/len(len_sent_list)))
         print('avg triplet num %f' % (sum(triplet_num)/len(triplet_num)))
         print(Counter(triplet_num))
+        print('\n')
 
     def evaluation(self):
         dev_set = self.Dataset(self.hyper, self.hyper.dev)
@@ -235,10 +235,6 @@ class Runner(object):
                 loss = output['loss']
                 loss.backward()
                 self.optimizer.step()
-                
-                # temp
-                # self.save_model(epoch)
-                # exit()
 
                 pbar.set_description(output['description'](
                     epoch, self.hyper.epoch_num))

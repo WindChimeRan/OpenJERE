@@ -29,6 +29,10 @@ class Chinese(ABC):
     def _read_line(self, line: str) -> Optional[str]:
         raise NotImplementedError('abc method!')
 
+    def gen_all_data(self):
+        for path in self.hyper.raw_data_list:
+            self._gen_one_data(path)
+
     @abstractmethod
     def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
         pass
@@ -95,10 +99,6 @@ class Chinese(ABC):
                 if newline is not None:
                     t.write(newline)
                     t.write('\n')
-
-    def gen_all_data(self):
-        self._gen_one_data(self.hyper.train)
-        self._gen_one_data(self.hyper.dev)
 
     def spo_to_entities(self, text: str,
                         spo_list: List[Dict[str, str]]) -> List[str]:

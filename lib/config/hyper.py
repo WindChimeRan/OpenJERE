@@ -1,6 +1,6 @@
 import json
 
-from typing import Optional
+from typing import Optional, List
 from dataclasses import dataclass
 
 @dataclass
@@ -8,10 +8,13 @@ class Hyper(object):
     def __init__(self, path: str):
         self.dataset: str
         self.model: str
+
         self.data_root: str
         self.raw_data_root: str
         self.train: str
         self.dev: str
+        self.raw_data_list: List[str]
+
         self.relation_vocab: str
         self.print_epoch: int
         self.evaluation_epoch: int
