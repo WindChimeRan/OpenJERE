@@ -4,7 +4,7 @@ saved_models
 raw_data.zip
 .vscode
 raw_data/*
-!/raw_data/EWebNLG/data/webnlg/reader.py
-!/raw_data/EWebNLG/data/webnlg/utils.py
-!/raw_data/EWebNLG/README.md
+!raw_data/EWebNLG/data/webnlg/reader.py
+!raw_data/EWebNLG/data/webnlg/utils.py
+!raw_data/EWebNLG/README.md
 
