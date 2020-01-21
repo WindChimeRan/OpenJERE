@@ -3,17 +3,14 @@ data
 saved_models
 raw_data.zip
 .vscode
-!raw_data/EWebNLG/data/webnlg/reader.py
-!raw_data/EWebNLG/data/webnlg/utils.py
-!raw_data/EWebNLG/README.md
-!.gitignore
+
 
 raw_data/chinese/*
-raw_data/EWebNLG/test.json
-raw_data/EWebNLG/valid.json
-raw_data/EWebNLG/train.json
-raw_data/EWebNLG/data/webnlg/raw/*
-raw_data/EWebNLG/data/webnlg/test.json
-raw_data/EWebNLG/data/webnlg/valid.json
-raw_data/EWebNLG/data/webnlg/train.json
+
+raw_data/EWebNLG/data/webnlg/raw
+
+**/test.json
+**/valid.json
+**/train.json
+
 raw_data/saoke/SAOKE_DATA.json
