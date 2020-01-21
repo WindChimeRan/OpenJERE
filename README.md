@@ -34,15 +34,23 @@ cd raw_data
 unzip ../raw_data_joint.zip
 ```
 
-## EWebNLG
-
-[code](https://github.com/zhijing-jin/WebNLG_Reader)
-[paper](https://www.aclweb.org/anthology/W18-6521.pdf)
+Then use the script to download enriched webnlg directly:
 
 ```bash
 cd raw_data/EWebNLG
 python data/webnlg/reader.py
 ```
+
+Then run data_split for both datasets:
+```bash
+python data_split.py
+```
+
+## EWebNLG
+
+[code](https://github.com/zhijing-jin/WebNLG_Reader)
+[paper](https://www.aclweb.org/anthology/W18-6521.pdf)
+
 
 ## Chinese IE
 Competition: Chinese Information Extraction Competition [link](http://lic2019.ccf.org.cn/kg)
