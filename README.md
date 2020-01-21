@@ -3,7 +3,7 @@
 # Requirement
 
 * python 3.7
-* pytorch 1.10
+* pytorch 1.3
 
 # Models
 
