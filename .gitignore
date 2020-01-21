@@ -1,20 +1,23 @@
 **/__pycache__
-data
+data/*
 saved_models
 raw_data.zip
 .vscode
 
 
-raw_data/chinese/*
+# raw_data/chinese/*
 
-raw_data/EWebNLG/data/webnlg/raw
+raw_data/EWebNLG/data/webnlg/raw/*
 
-**/test.json
-**/valid.json
-**/train.json
+# **/test.json
+# **/valid.json
+# **/train.json
 
 
-**/*_data.json
+# **/*_data.json
 
-raw_data/saoke/SAOKE_DATA.json
-new_*
+# raw_data/saoke/SAOKE_DATA.json
+# new_*
+**.json
+**/all_50_schemas
+!experiments/*
