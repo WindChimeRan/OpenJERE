@@ -31,7 +31,7 @@ parser.add_argument('--mode',
                     '-m',
                     type=str,
                     default='train',
-                    help='data_split|preprocessing|train|evaluation|data_summary')
+                    help='preprocessing|train|evaluation|data_summary')
 args = parser.parse_args()
 
 
@@ -107,9 +107,6 @@ class Runner(object):
         elif mode == 'data_summary':
             for path in self.hyper.raw_data_list:
                 self.summary_data(path)
-        elif mode == 'data_split':
-            # chinese/conll/...
-            self.data_split(self.hyper.dataset)
         else:
             raise ValueError('invalid mode')
 
