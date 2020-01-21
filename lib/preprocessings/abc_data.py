@@ -69,7 +69,7 @@ class Chinese(ABC):
         source = os.path.join(self.raw_data_root, self.hyper.train)
         target = os.path.join(self.data_root, 'word_vocab.json')
 
-        cnt = Counter()  # 8180 total
+        cnt = Counter()
         with open(source, 'r') as s:
             for line in s:
                 line = line.strip("\n")

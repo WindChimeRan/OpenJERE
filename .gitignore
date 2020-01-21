@@ -13,4 +13,8 @@ raw_data/EWebNLG/data/webnlg/raw
 **/valid.json
 **/train.json
 
+
+**/*_data.json
+
 raw_data/saoke/SAOKE_DATA.json
+new_*
