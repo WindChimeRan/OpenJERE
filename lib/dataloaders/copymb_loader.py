@@ -69,19 +69,19 @@ class Copymb_Dataset(Abstract_dataset):
         seq_tensor = torch.zeros(
             (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1)).long()
 
-        mask_tensor = seq_tensor.to(torch.uint8)
+        mask_tensor = seq_tensor.bool()
 
         NA = self.relation_vocab['N']
         for i in range(self.hyper.max_text_len):
             if str(i) not in seq:
                 seq_tensor[i, 0] = NA 
-                mask_tensor[i, 0] = 1
+                mask_tensor[i, 0] = True
         for s, pair in seq.items():
             for i, ptr in enumerate(pair):
                 seq_tensor[int(s), i] = ptr
-                mask_tensor[int(s), i] = 1
+                mask_tensor[int(s), i] = True
             seq_tensor[int(s), i + 1] = NA
-            mask_tensor[int(s), i + 1] = 1
+            mask_tensor[int(s), i + 1] = True
         
         assert mask_tensor.sum() > 0
 

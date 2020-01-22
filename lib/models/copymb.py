@@ -10,7 +10,8 @@ from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 
 # from torchcrf import CRF
-from TorchCRF import CRF
+# from TorchCRF import CRF
+from lib.tagger.crf import CRF
 
 import torchsnooper
 from pytorch_memlab import profile
@@ -136,7 +137,7 @@ class CopyMB(nn.Module):
         hidden_idx = torch.tensor(
             list(map(lambda x: x-1, length)), dtype=torch.long).cuda(self.gpu)
         hidden_idx = torch.zeros_like(tokens).scatter_(
-            1, hidden_idx.unsqueeze(1), 1).to(torch.uint8)
+            1, hidden_idx.unsqueeze(1), 1).bool()
 
         h = o[hidden_idx]
         h = h.unsqueeze(1).expand(-1, self.hyper.max_text_len, -
@@ -164,7 +165,7 @@ class CopyMB(nn.Module):
                 else:
 
                     copy_index = torch.zeros((B, L)).scatter_(
-                        1, decoder_input.unsqueeze(1).cpu(), 1).to(torch.uint8)
+                        1, decoder_input.unsqueeze(1).cpu(), 1).bool()
                     decoder_input = self.cat_linear(
                         self.activation(copy_o[copy_index]))
 
@@ -188,7 +189,7 @@ class CopyMB(nn.Module):
                 else:
 
                     copy_index = torch.zeros((B, L)).scatter_(
-                        1, decoder_input.unsqueeze(1).cpu(), 1).to(torch.uint8)
+                        1, decoder_input.unsqueeze(1).cpu(), 1).bool()
                     decoder_input = self.cat_linear(
                         self.activation(copy_o[copy_index]))
 
