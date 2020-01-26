@@ -9,10 +9,8 @@ import copy
 from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 
-# from torchcrf import CRF
-# from TorchCRF import CRF
-from lib.tagger.crf import CRF
 
+from lib.tagger.crf import CRF
 from lib.metrics import F1_triplet
 
 

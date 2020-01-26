@@ -6,15 +6,17 @@ import json
 import os
 import copy
 
+import torchsnooper
+
 from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
-
-# from torchcrf import CRF
-# from TorchCRF import CRF
-from lib.tagger.crf import CRF
-
-import torchsnooper
 from pytorch_memlab import profile
+
+from lib.tagger.crf import CRF
+from lib.metrics import F1_triplet
+
+
+
 
 
 class CopyMB(nn.Module):
@@ -89,8 +91,9 @@ class CopyMB(nn.Module):
 
         self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
         self.ce = nn.CrossEntropyLoss(reduction='none')
+        self.metrics = F1_triplet()
+        self.get_metric = self.metrics.get_metric
 
-    # @profile
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
         tokens = sample.tokens_id.cuda(self.gpu)
@@ -150,6 +153,7 @@ class CopyMB(nn.Module):
 
         B, L, _ = copy_o.size()
         decoder_loss = 0
+        decoder_result = []
         if is_train:
             seq_gold = seq_gold.view(-1, 2 * self.hyper.max_decode_len + 1)
             for i in range(self.hyper.max_decode_len * 2 + 1):
@@ -177,19 +181,20 @@ class CopyMB(nn.Module):
             decoder_loss = decoder_loss / mask_decode.sum()
         # if evaluation
         else:
+            
             for i in range(self.hyper.max_decode_len * 2 + 1):
 
                 decoder_input = decoder_input.squeeze()
                 decoder_output, h, output_logits = self._decode_step(
                     i, h, decoder_input, copy_o)
-
-                decoder_input = torch.argmax(output_logits, dim=1).detach()
+                idx = torch.argmax(output_logits, dim=1).detach()
                 if i % 2 == 0:
-                    decoder_input = self.relation_emb(decoder_input)
+                    decoder_input = self.relation_emb(idx)
+                    decoder_result.append(idx)
                 else:
-
                     copy_index = torch.zeros((B, L)).scatter_(
-                        1, decoder_input.unsqueeze(1).cpu(), 1).bool()
+                        1, idx.unsqueeze(1).cpu(), 1).bool()
+                    decoder_result.append(copy_index)
                     decoder_input = self.cat_linear(
                         self.activation(copy_o[copy_index]))
 
@@ -197,14 +202,21 @@ class CopyMB(nn.Module):
         output['crf_loss'] = crf_loss
         output['decoder_loss'] = decoder_loss
         output['loss'] = loss
+        
 
         output['description'] = partial(self.description, output=output)
 
         if not is_train:
-            # TODO inference
-            pass
-
+            decoder_result = self.decodeid2triplet(decoder_result)
+            print(len(decoder_result))
+            print(decoder_result[0])
+            print(decoder_result[1])
+            print(decoder_result[2])
+            output['decode_result'] = decoder_result
+            exit()
         return output
+    def decodeid2triplet(self, decode_list):
+        return decode_list
 
     @staticmethod
     def description(epoch, epoch_num, output):

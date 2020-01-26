@@ -110,8 +110,6 @@ class Runner(object):
         else:
             raise ValueError('invalid mode')
 
-
-
     def load_model(self, epoch: int):
         self.model.load_state_dict(
             torch.load(
@@ -158,6 +156,7 @@ class Runner(object):
         with torch.no_grad():
             for batch_ndx, sample in pbar:
                 output = self.model(sample, is_train=False)
+
                 self.model.run_metrics(output)
 
             result = self.model.get_metric()
