@@ -148,7 +148,7 @@ class CopyMB(nn.Module):
         copy_o = cat_o.unsqueeze(0).expand(self.hyper.max_text_len, -1, -1, -1).contiguous(
         ).view(-1, self.hyper.max_text_len, self.hyper.hidden_size + self.hyper.bio_emb_size)
 
-        B, L, _ = copy_o.size()
+        B_stacked, L, _ = copy_o.size()
         # print(B, L)
         decoder_loss = 0
         decoder_result = []
@@ -166,7 +166,7 @@ class CopyMB(nn.Module):
                     decoder_input = self.relation_emb(decoder_input)
                 else:
 
-                    copy_index = torch.zeros((B, L)).scatter_(
+                    copy_index = torch.zeros((B_stacked, L)).scatter_(
                         1, decoder_input.unsqueeze(1).cpu(), 1).bool()
                     decoder_input = self.cat_linear(
                         self.activation(copy_o[copy_index]))
@@ -185,12 +185,21 @@ class CopyMB(nn.Module):
                 decoder_input = decoder_input.squeeze()
                 decoder_output, h, output_logits = self._decode_step(
                     i, h, decoder_input, copy_o)
-                idx = torch.argmax(output_logits, dim=1).detach()
+
+                # idx = torch.argmax(output_logits, dim=1).detach()
                 if i % 2 == 0:
+                    idx = torch.argmax(output_logits, dim=1).detach()
                     decoder_input = self.relation_emb(idx)
                     decoder_result.append(idx.cpu())
                 else:
-                    copy_index = torch.zeros((B, L)).scatter_(
+                    batch_size = mask.size(0) # batch_size=35, B=3500
+                    copy_mask = (mask.unsqueeze(-1).expand(batch_size, L, L) == False) * (-1000)
+                    new_logits = (output_logits.view(batch_size, L, L) + copy_mask).view(batch_size * L, L)
+                    # new_logits = output_logits
+                    # print(output_logits.size())
+                    # new_logits = new_logits.view(B, text_len)
+                    idx = torch.argmax(new_logits, dim=1).detach()
+                    copy_index = torch.zeros((B_stacked, L)).scatter_(
                         1, idx.unsqueeze(1).cpu(), 1).bool()
                     decoder_result.append(copy_index.long())
                     decoder_input = self.cat_linear(
@@ -204,23 +213,20 @@ class CopyMB(nn.Module):
         output['description'] = partial(self.description, output=output)
 
         if not is_train:
-            # decoder_result = torch.stack(decoder_result, dim=0)
-            decoder_result = self.decodeid2triplet(decoder_result, tokens, decoded_tag)
-            # print(len(decoder_result))
-            # print(decoder_result[0])
-            # print(decoder_result[1])
-            # print(decoder_result[2])
+            decoder_result = self.decodeid2triplet(decoder_result, tokens, bio_gold.tolist(), mask)
             output['decode_result'] = decoder_result
+            print(decoder_result)
             exit()
         return output
 
-    def decodeid2triplet(self, decode_list, tokens, decoded_tag):
+    def decodeid2triplet(self, decode_list, tokens, decoded_tag, mask):
         # 13 * 35 * 100
         text_len = self.hyper.max_text_len
         B = decode_list[0].size(0)//text_len
         decoded_tag = [[self.hyper.id2bio[t] for t in tt] for tt in decoded_tag]
         tokens = [[self.hyper.id2word[t] for t in tt] for tt in tokens.tolist()]
         result = [[] for i in range(B)] # batch = 35
+        text_length = torch.sum(mask, dim=1).tolist()
 
 
         def find_entity(pos: int, tag: List[str], text: List[str]) -> List[str]:
@@ -228,7 +234,7 @@ class CopyMB(nn.Module):
             text_tag = list(zip(text, tag))
 
             r = []
-            while pos > 0:
+            while pos >= 0:
                 tok, tg = text_tag[pos]
                 if tg == 'O':
                     r.append(tok)
@@ -240,12 +246,17 @@ class CopyMB(nn.Module):
                     # find pre
                     r.append(tok)
                     pos -= 1
+                else:
+                    ValueError('should be BIO')
 
             r = list(reversed(r))
             return r
 
         for b in range(B):
-            for t in range(text_len):
+            print(b)
+            # for t in range(self.hyper.max_text_len):
+            for t in range(text_length[b]):
+                print(t)
                 # head = ?
                 text = tokens[b]
                 tag = decoded_tag[b]
@@ -267,13 +278,16 @@ class CopyMB(nn.Module):
                         mat = step.view(B, text_len, text_len)
                         ent = mat[b, t].cpu()
                         
+                        assert torch.sum(ent) == 1
                         tail_pos = torch.argmax(ent)
                         tail = find_entity(tail_pos, tag, text)
                         tail = self.hyper.join(tail)
                         triplet = {'subject':head, 'predicate':rel, 'object': tail}
                         
+                        print(triplet)
                         result[b].append(triplet)
-
+        print(result)
+        exit()
         return result
 
     @staticmethod
