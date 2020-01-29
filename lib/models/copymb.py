@@ -221,11 +221,15 @@ class CopyMB(nn.Module):
         result = [[] for i in range(B)] # batch = 35
         # print(len(decode_list))
         # print(decode_list[0].size())
-        for step in decode_list: # mat 3500 -> 1 in 13 decode steps
-            # print(step.size())
-            for b in range(B):
-                for t in range(text_len):
-                    if t % 2 == 0: # rel
+        # memo = torch.BoolTensor(len(decode_list), B, text_len).fill_(False)
+        # for i, step in enumerate(decode_list): # mat 3500 -> 1 in 13 decode steps
+        #     # print(step.size())
+        #     for b in range(B):
+        #         for t in range(text_len):
+        for b in range(B):
+            for t in range(text_len):
+                for i, step in enumerate(decode_list):
+                    if i % 2 == 0: # rel
                         print('rel', step.size())
                         print(b, t)
                         mat = step.view(B, text_len)
@@ -237,7 +241,7 @@ class CopyMB(nn.Module):
                         # 3500 x 100 = 35 x 100 x 100
                         print('ent', step.size())
                         mat = step.view(B, text_len, text_len)
-                        ent = mat[b, t].item()
+                        ent = mat[b, t].cpu()
                         text = text_list[b]
                         tag = decoded_tag[b]
                         print(text)
