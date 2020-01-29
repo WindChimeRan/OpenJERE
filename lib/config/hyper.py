@@ -33,6 +33,7 @@ class Hyper(object):
         self.epoch_num: int
         self.batch_size_train: int
         self.batch_size_eval: int
+        self.seperator: str
         self.gpu: int
 
         self.__dict__ = json.load(open(path, 'r'))
@@ -45,6 +46,24 @@ class Hyper(object):
             open(os.path.join(self.data_root, 'bio_vocab.json'), 'r'))
         self.id2word = {k:v for v, k in self.word2id.items()}
         self.id2rel  = {k:v for v, k in self.rel2id.items()}
+        self.id2bio = {k:v for v, k in self.bio_vocab.items()}
+
 
     def __post_init__(self):
         pass
+
+    def join(self, toks: List[str]) -> str:
+        if self.seperator == '':
+            return ''.join(toks)
+        elif self.seperator == ' ':
+            return ' '.join(toks)
+        else:
+            raise NotImplementedError('other tokenizer?')
+    
+    def tokenizer(self, text: str) -> List[str]:
+        if self.seperator == '':
+            return list(text)
+        elif self.seperator == ' ':
+            return text.split(' ')
+        else:
+            raise NotImplementedError('other tokenizer?')

@@ -32,7 +32,7 @@ class Copymb_Dataset(Abstract_dataset):
             self.text_list.append(instance['text'])
             self.bio_list.append(instance['bio'])
             self.spo_list.append(instance['spo_list'])
-
+        
     def __getitem__(self, index):
 
         seq = self.seq_list[index]
@@ -51,7 +51,7 @@ class Copymb_Dataset(Abstract_dataset):
 
     def text2tensor(self, text: List[str]) -> torch.tensor:
         oov = self.word_vocab['oov']
-        padded_list = list(map(lambda x: self.word_vocab.get(x, oov), text))
+        padded_list = list(map(lambda x: self.word_vocab.get(x, oov), self.tokenizer(text)))
         padded_list.extend([self.word_vocab['<pad>']] *
                            (self.hyper.max_text_len - len(text)))
         return torch.tensor(padded_list)

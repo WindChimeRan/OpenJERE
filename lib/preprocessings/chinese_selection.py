@@ -8,7 +8,7 @@ from overrides import overrides
 
 from cached_property import cached_property
 
-from lib.preprocessings.abc_data import Chinese
+from lib.preprocessings.abc_preprocessor import Chinese
 
 
 class Chinese_selection_preprocessing(Chinese):

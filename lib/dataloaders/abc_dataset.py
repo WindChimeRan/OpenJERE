@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from functools import partial
 from typing import Dict, List, Tuple, Set, Optional
 
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractstaticmethod
 
 
 class Abstract_dataset(ABC, Dataset):
@@ -22,6 +22,8 @@ class Abstract_dataset(ABC, Dataset):
             open(os.path.join(self.data_root, 'relation_vocab.json'), 'r'))
         self.bio_vocab = json.load(
             open(os.path.join(self.data_root, 'bio_vocab.json'), 'r'))
+
+        self.tokenizer = self.hyper.tokenizer
 
     @abstractmethod
     def __getitem__(self, index):

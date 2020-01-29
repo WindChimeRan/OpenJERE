@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple, Set, Optional
 from cached_property import cached_property
 from overrides import overrides
 
-from lib.preprocessings.abc_data import Chinese
+from lib.preprocessings.abc_preprocessor import Chinese
 
 
 class Chinese_copymb_preprocessing(Chinese):

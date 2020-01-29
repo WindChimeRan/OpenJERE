@@ -205,7 +205,7 @@ class CopyMB(nn.Module):
 
         if not is_train:
             # decoder_result = torch.stack(decoder_result, dim=0)
-            decoder_result = self.decodeid2triplet(decoder_result, text_list, decoded_tag)
+            decoder_result = self.decodeid2triplet(decoder_result, tokens, decoded_tag)
             # print(len(decoder_result))
             # print(decoder_result[0])
             # print(decoder_result[1])
@@ -214,24 +214,48 @@ class CopyMB(nn.Module):
             exit()
         return output
 
-    def decodeid2triplet(self, decode_list, text_list, decoded_tag):
+    def decodeid2triplet(self, decode_list, tokens, decoded_tag):
         # 13 * 35 * 100
         text_len = self.hyper.max_text_len
         B = decode_list[0].size(0)//text_len
+        decoded_tag = [[self.hyper.id2bio[t] for t in tt] for tt in decoded_tag]
+        tokens = [[self.hyper.id2word[t] for t in tt] for tt in tokens.tolist()]
         result = [[] for i in range(B)] # batch = 35
-        # print(len(decode_list))
-        # print(decode_list[0].size())
-        # memo = torch.BoolTensor(len(decode_list), B, text_len).fill_(False)
-        # for i, step in enumerate(decode_list): # mat 3500 -> 1 in 13 decode steps
-        #     # print(step.size())
-        #     for b in range(B):
-        #         for t in range(text_len):
+
+
+        def find_entity(pos: int, tag: List[str], text: List[str]) -> List[str]:
+
+            text_tag = list(zip(text, tag))
+
+            r = []
+            while pos > 0:
+                tok, tg = text_tag[pos]
+                if tg == 'O':
+                    r.append(tok)
+                    break
+                elif tg == 'B':
+                    r.append(tok)
+                    break
+                elif tg == 'I':
+                    # find pre
+                    r.append(tok)
+                    pos -= 1
+
+            r = list(reversed(r))
+            return r
+
         for b in range(B):
             for t in range(text_len):
+                # head = ?
+                text = tokens[b]
+                tag = decoded_tag[b]
+                head_pos = t
+                head = find_entity(head_pos, tag, text)
+                head = self.hyper.join(head)
                 for i, step in enumerate(decode_list):
                     if i % 2 == 0: # rel
-                        print('rel', step.size())
-                        print(b, t)
+                        # print('rel', step.size())
+                        # print(b, t)
                         mat = step.view(B, text_len)
                         rel = mat[b, t].item()
                         rel = self.hyper.id2rel[rel]
@@ -239,19 +263,18 @@ class CopyMB(nn.Module):
                             break
                     else:          # ent
                         # 3500 x 100 = 35 x 100 x 100
-                        print('ent', step.size())
+                        # print('ent', step.size())
                         mat = step.view(B, text_len, text_len)
                         ent = mat[b, t].cpu()
-                        text = text_list[b]
-                        tag = decoded_tag[b]
-                        print(text)
-                        print(ent)
-                        print(tag)
-                        exit()
-                        # rel, ent, ent
-        exit()
+                        
+                        tail_pos = torch.argmax(ent)
+                        tail = find_entity(tail_pos, tag, text)
+                        tail = self.hyper.join(tail)
+                        triplet = {'subject':head, 'predicate':rel, 'object': tail}
+                        
+                        result[b].append(triplet)
 
-        return decode_list
+        return result
 
     @staticmethod
     def description(epoch, epoch_num, output):

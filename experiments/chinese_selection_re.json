@@ -21,5 +21,6 @@
     "epoch_num":30,
     "batch_size_train": 100,
     "batch_size_eval":400,
+    "seperator": "",
     "gpu":0
 }
