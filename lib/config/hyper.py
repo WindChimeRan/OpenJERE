@@ -1,5 +1,5 @@
 import json
-
+import os
 from typing import Optional, List
 from dataclasses import dataclass
 
@@ -36,6 +36,15 @@ class Hyper(object):
         self.gpu: int
 
         self.__dict__ = json.load(open(path, 'r'))
+
+        self.word2id = json.load(
+            open(os.path.join(self.data_root, 'word_vocab.json'), 'r'))
+        self.rel2id = json.load(
+            open(os.path.join(self.data_root, 'relation_vocab.json'), 'r'))
+        self.bio_vocab = json.load(
+            open(os.path.join(self.data_root, 'bio_vocab.json'), 'r'))
+        self.id2word = {k:v for v, k in self.word2id.items()}
+        self.id2rel  = {k:v for v, k in self.rel2id.items()}
 
     def __post_init__(self):
         pass

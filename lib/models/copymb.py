@@ -16,9 +16,6 @@ from lib.tagger.crf import CRF
 from lib.metrics import F1_triplet
 
 
-
-
-
 class CopyMB(nn.Module):
     def __init__(self, hyper) -> None:
         super(CopyMB, self).__init__()
@@ -152,6 +149,7 @@ class CopyMB(nn.Module):
         ).view(-1, self.hyper.max_text_len, self.hyper.hidden_size + self.hyper.bio_emb_size)
 
         B, L, _ = copy_o.size()
+        # print(B, L)
         decoder_loss = 0
         decoder_result = []
         if is_train:
@@ -181,7 +179,7 @@ class CopyMB(nn.Module):
             decoder_loss = decoder_loss / mask_decode.sum()
         # if evaluation
         else:
-            
+
             for i in range(self.hyper.max_decode_len * 2 + 1):
 
                 decoder_input = decoder_input.squeeze()
@@ -190,11 +188,11 @@ class CopyMB(nn.Module):
                 idx = torch.argmax(output_logits, dim=1).detach()
                 if i % 2 == 0:
                     decoder_input = self.relation_emb(idx)
-                    decoder_result.append(idx)
+                    decoder_result.append(idx.cpu())
                 else:
                     copy_index = torch.zeros((B, L)).scatter_(
                         1, idx.unsqueeze(1).cpu(), 1).bool()
-                    decoder_result.append(copy_index)
+                    decoder_result.append(copy_index.long())
                     decoder_input = self.cat_linear(
                         self.activation(copy_o[copy_index]))
 
@@ -202,20 +200,53 @@ class CopyMB(nn.Module):
         output['crf_loss'] = crf_loss
         output['decoder_loss'] = decoder_loss
         output['loss'] = loss
-        
 
         output['description'] = partial(self.description, output=output)
 
         if not is_train:
-            decoder_result = self.decodeid2triplet(decoder_result)
-            print(len(decoder_result))
-            print(decoder_result[0])
-            print(decoder_result[1])
-            print(decoder_result[2])
+            # decoder_result = torch.stack(decoder_result, dim=0)
+            decoder_result = self.decodeid2triplet(decoder_result, text_list, decoded_tag)
+            # print(len(decoder_result))
+            # print(decoder_result[0])
+            # print(decoder_result[1])
+            # print(decoder_result[2])
             output['decode_result'] = decoder_result
             exit()
         return output
-    def decodeid2triplet(self, decode_list):
+
+    def decodeid2triplet(self, decode_list, text_list, decoded_tag):
+        # 13 * 35 * 100
+        text_len = self.hyper.max_text_len
+        B = decode_list[0].size(0)//text_len
+        result = [[] for i in range(B)] # batch = 35
+        # print(len(decode_list))
+        # print(decode_list[0].size())
+        for step in decode_list: # mat 3500 -> 1 in 13 decode steps
+            # print(step.size())
+            for b in range(B):
+                for t in range(text_len):
+                    if t % 2 == 0: # rel
+                        print('rel', step.size())
+                        print(b, t)
+                        mat = step.view(B, text_len)
+                        rel = mat[b, t].item()
+                        rel = self.hyper.id2rel[rel]
+                        if rel == 'N':
+                            break
+                    else:          # ent
+                        # 3500 x 100 = 35 x 100 x 100
+                        print('ent', step.size())
+                        mat = step.view(B, text_len, text_len)
+                        ent = mat[b, t].item()
+                        text = text_list[b]
+                        tag = decoded_tag[b]
+                        print(text)
+                        print(ent)
+                        print(tag)
+                        exit()
+                        # rel, ent, ent
+        exit()
+
         return decode_list
 
     @staticmethod
