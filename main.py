@@ -157,6 +157,12 @@ class Runner(object):
             for batch_ndx, sample in pbar:
                 output = self.model(sample, is_train=False)
 
+                # # DEBUG: error analysis
+                # for g, p in zip(output['spo_gold'], output['decode_result']):
+                #     print(g)
+                #     print(p)
+                #     print('-'*50)
+                # exit()
                 self.model.run_metrics(output)
 
             result = self.model.get_metric()
@@ -168,7 +174,7 @@ class Runner(object):
     def train(self):
         train_set = self.Dataset(self.hyper, self.hyper.train)
         loader = self.Loader(
-            train_set, batch_size=self.hyper.batch_size_train, pin_memory=True, num_workers=1)
+            train_set, batch_size=self.hyper.batch_size_train, pin_memory=True, num_workers=8)
 
         for epoch in range(self.hyper.epoch_num):
             self.model.train()
