@@ -133,7 +133,7 @@ class CopyMB(nn.Module):
         cat_o = torch.cat((o, tag_emb), dim=2)
 
         o_hid_size = cat_o.size(-1)
-
+        # TODO: 看不懂了...
         hidden_idx = torch.tensor(
             list(map(lambda x: x-1, length)), dtype=torch.long).cuda(self.gpu)
         hidden_idx = torch.zeros_like(tokens).scatter_(
