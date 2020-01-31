@@ -50,7 +50,7 @@ class CopyMB(nn.Module):
                                   bidirectional=True,
                                   batch_first=True)
             self.decoder = nn.GRU(hyper.emb_size,
-                                  hyper.hidden_size,
+                                  hyper.hidden_size + hyper.bio_emb_size,
                                   bidirectional=False,
                                   batch_first=True)
         elif hyper.cell_name == 'lstm':
@@ -59,7 +59,7 @@ class CopyMB(nn.Module):
                                    bidirectional=True,
                                    batch_first=True)
             self.decoder = nn.LSTM(hyper.emb_size,
-                                   hyper.hidden_size,
+                                   hyper.hidden_size + hyper.bio_emb_size,
                                    bidirectional=False,
                                    batch_first=True)
         else:
@@ -69,6 +69,8 @@ class CopyMB(nn.Module):
             self.activation = nn.ReLU()
         elif hyper.activation.lower() == 'tanh':
             self.activation = nn.Tanh()
+        elif hyper.activation.lower() == 'gelu':
+            self.activation = F.gelu
         else:
             raise ValueError('unexpected activation!')
 
@@ -79,10 +81,10 @@ class CopyMB(nn.Module):
         self.rel_linear_a = nn.Linear(
             hyper.hidden_size + hyper.bio_emb_size, hyper.hidden_size)
         self.rel_linear_b = nn.Linear(
-            hyper.hidden_size, len(self.relation_vocab))
+            hyper.hidden_size + hyper.bio_emb_size, len(self.relation_vocab))
 
         self.entity_linear_1 = nn.Linear(
-            hyper.hidden_size * 2 + hyper.bio_emb_size, hyper.hidden_size)
+            hyper.hidden_size * 3 + 3 * hyper.bio_emb_size, hyper.hidden_size)
         self.entity_linear_2 = nn.Linear(hyper.hidden_size, 1)
 
         self.cat_linear = nn.Linear(
@@ -139,37 +141,13 @@ class CopyMB(nn.Module):
         o_hid_size = cat_o.size(-1)
 
 
-        
 
-
-        # # TODO: 看不懂了...
-        hidden_idx = torch.tensor(
-            list(map(lambda x: x-1, length)), dtype=torch.long).cuda(self.gpu)
-        hidden_idx = torch.zeros_like(tokens).scatter_(
-            1, hidden_idx.unsqueeze(1), 1).bool()
-
-        h = o[hidden_idx]
-        h = h.unsqueeze(1).expand(-1, self.hyper.max_text_len, -
-                                  1).contiguous().view(1, -1, self.hyper.hidden_size).contiguous()
-        decoder_sos = cat_o.view(-1, o_hid_size)
-
-        decoder_input = self.cat_linear(self.activation(decoder_sos))
-
-        
-
-        # batch = batch * max_decode_len
         copy_o = cat_o.unsqueeze(0).expand(self.hyper.max_text_len, -1, -1, -1).contiguous(
         ).view(-1, self.hyper.max_text_len, self.hyper.hidden_size + self.hyper.bio_emb_size)
 
-        # print(h.size())
-        # print(copy_o.size())
-        # # 1,3000,300
-        # # 3000,100,350
-        # exit()
-        # # new
-        # sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).expand(self.hyper.max_text_len * B, -1)
-        # decoder_input = sos
-        # h = copy_o
+        sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).expand(self.hyper.max_text_len * B, -1)
+        decoder_input = sos
+        h = fst_hidden = cat_o.view(1, -1, self.hyper.hidden_size + self.hyper.bio_emb_size)
 
         B_stacked, L, _ = copy_o.size()
         # print(B, L)
@@ -181,7 +159,7 @@ class CopyMB(nn.Module):
 
                 decoder_input = decoder_input.squeeze()
                 decoder_output, h, output_logits = self._decode_step(
-                    i, h, decoder_input, copy_o)
+                    i, h, decoder_input, copy_o, fst_hidden)
 
                 # use groundtruth
                 decoder_input = seq_gold[:, i]
@@ -199,7 +177,8 @@ class CopyMB(nn.Module):
 
                 decoder_loss += step_loss.sum()
 
-            decoder_loss = decoder_loss / mask_decode.sum()
+            # decoder_loss = decoder_loss / mask_decode.sum()
+            decoder_loss = decoder_loss / B
         # if evaluation
         else:
 
@@ -207,7 +186,7 @@ class CopyMB(nn.Module):
 
                 decoder_input = decoder_input.squeeze()
                 decoder_output, h, output_logits = self._decode_step(
-                    i, h, decoder_input, copy_o)
+                    i, h, decoder_input, copy_o, fst_hidden)
 
                 idx = torch.argmax(output_logits, dim=1).detach()
                 if i % 2 == 0:
@@ -307,7 +286,7 @@ class CopyMB(nn.Module):
             output['loss'].item(), output['crf_loss'].item(),
             output['decoder_loss'].item(), epoch, epoch_num)
 
-    def _decode_step(self, t: int, decoder_state, decoder_input, o):
+    def _decode_step(self, t: int, decoder_state, decoder_input, copy_o, fst_hidden):
 
         decoder_input = decoder_input.unsqueeze(dim=1)
         decoder_output, decoder_state = self.decoder(
@@ -317,10 +296,15 @@ class CopyMB(nn.Module):
             # relation logits
             output_logits = self.rel_linear_b(decoder_state.squeeze())
         else:
+            # TODO: add head
             output_logits = torch.cat(
-                (decoder_state.permute(1, 0, 2).expand(-1, self.hyper.max_text_len, -1), o), dim=2)  # hidden 300 + 300 + 50
+                (decoder_state.permute(1, 0, 2).expand(-1, self.hyper.max_text_len, -1), copy_o), dim=2)  # hidden 300 + 300 + 50
+            # print(output_logits.size())
+            # print(fst_hidden.size())
+            output_logits = torch.cat((output_logits, fst_hidden.permute(1,0,2).expand(-1, self.hyper.max_text_len, -1)), dim=2)
+            # exit()
             output_logits = self.entity_linear_2(self.activation(
-                self.entity_linear_1(self.activation(output_logits)))).squeeze()
+                self.entity_linear_1((output_logits)))).squeeze()
 
         return decoder_output, decoder_state, output_logits
 

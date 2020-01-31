@@ -17,7 +17,7 @@
     "bio_emb_size": 50,
     "hidden_size": 300,
     "threshold": 0.5,
-    "activation": "tanh",
+    "activation": "gelu",
     "optimizer": "adam",
     "epoch_num":50,
     "batch_size_train": 30,
