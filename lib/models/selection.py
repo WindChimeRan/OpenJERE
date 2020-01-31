@@ -57,6 +57,8 @@ class MultiHeadSelection(nn.Module):
             self.activation = nn.ReLU()
         elif hyper.activation.lower() == 'tanh':
             self.activation = nn.Tanh()
+        elif hyper.activation.lower() == 'gelu':
+            self.activation = F.gelu
         else:
             raise ValueError('unexpected activation!')
 

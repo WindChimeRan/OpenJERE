@@ -19,7 +19,7 @@
 
 
 
-# Dataset
+# Run
 
 
 Download the dataset from [Google Drive](https://drive.google.com/open?id=1NCwIc9-lMkKt5PxapnQy3sdRUnZiooq0)
@@ -44,6 +44,14 @@ python data/webnlg/reader.py
 Then run data_split for both datasets:
 ```bash
 python data_split.py
+```
+
+
+```shell
+python main.py --mode preprocessing
+python main.py --mode train
+python main.py --mode evaluation
+
 ```
 
 ## EWebNLG
@@ -97,13 +105,7 @@ Counter({1: 8917, 2: 6565, 3: 2107, 4: 1033, 5: 444, 6: 258, 7: 24, 8: 9, 9: 4, 
 
 **Unzip \*.json into ./raw_data/chinese/**
 
-# Run
-```shell
-python main.py --mode preprocessing
-python main.py --mode train
-python main.py --mode evaluation
 
-```
 # Result
 
 Training speed: 10min/epoch

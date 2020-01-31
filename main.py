@@ -194,7 +194,7 @@ class Runner(object):
 
             self.save_model(epoch)
 
-            if epoch % self.hyper.print_epoch == 0 and epoch > 3:
+            if epoch % self.hyper.print_epoch == 0 and epoch != 0:
                 self.evaluation()
 
 
