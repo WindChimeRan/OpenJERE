@@ -9,7 +9,7 @@
         "new_train_data.json", "new_validate_data.json", "new_test_data.json", "new_test1.json", "new_test2.json", "new_test3.json", "new_test4.json", "new_test5.json"],
     "relation_vocab": "relation_vocab.json",
     "print_epoch": 3,
-    "evaluation_epoch":27,
+    "evaluation_epoch":2,
     "max_text_len": 100,
     "cell_name": "lstm",
     "emb_size": 300,

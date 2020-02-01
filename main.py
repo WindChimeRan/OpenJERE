@@ -8,7 +8,8 @@ import torch
 
 from typing import Dict, List, Tuple, Set, Optional
 
-from prefetch_generator import BackgroundGenerator
+# from prefetch_generator import BackgroundGenerator
+BackgroundGenerator = lambda x: x
 from tqdm import tqdm
 
 from collections import Counter
