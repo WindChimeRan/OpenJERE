@@ -97,14 +97,17 @@ class Runner(object):
         if mode == 'preprocessing':
             self.preprocessing()
         elif mode == 'train':
+            self.hyper.vocab_init()
             self._init_model()
             self.optimizer = self._optimizer(self.hyper.optimizer, self.model)
             self.train()
         elif mode == 'evaluation':
+            self.hyper.vocab_init()
             self._init_model()
             self.load_model(epoch=self.hyper.evaluation_epoch)
             self.evaluation()
         elif mode == 'data_summary':
+            self.hyper.vocab_init()
             for path in self.hyper.raw_data_list:
                 self.summary_data(path)
         else:
@@ -126,7 +129,7 @@ class Runner(object):
     def summary_data(self, dataset):
         data = self.Dataset(self.hyper, dataset)
         loader = self.Loader(data, batch_size=400,
-                             pin_memory=True, num_workers=8)
+                             pin_memory=True, num_workers=4)
 
         pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
 
@@ -147,7 +150,7 @@ class Runner(object):
     def evaluation(self):
         dev_set = self.Dataset(self.hyper, self.hyper.dev)
         loader = self.Loader(dev_set, batch_size=self.hyper.batch_size_eval,
-                             pin_memory=True, num_workers=1)
+                             pin_memory=True, num_workers=4)
         self.model.metrics.reset()
         self.model.eval()
 
@@ -158,11 +161,13 @@ class Runner(object):
                 output = self.model(sample, is_train=False)
 
                 # # DEBUG: error analysis
+
                 # for g, p in zip(output['spo_gold'], output['decode_result']):
                 #     print(g)
                 #     print(p)
                 #     print('-'*50)
                 # exit()
+
                 self.model.run_metrics(output)
 
             result = self.model.get_metric()
@@ -174,7 +179,7 @@ class Runner(object):
     def train(self):
         train_set = self.Dataset(self.hyper, self.hyper.train)
         loader = self.Loader(
-            train_set, batch_size=self.hyper.batch_size_train, pin_memory=True, num_workers=8)
+            train_set, batch_size=self.hyper.batch_size_train, pin_memory=True, num_workers=4)
 
         for epoch in range(self.hyper.epoch_num):
             self.model.train()

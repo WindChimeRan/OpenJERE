@@ -140,8 +140,6 @@ class CopyMB(nn.Module):
 
         o_hid_size = cat_o.size(-1)
 
-
-
         copy_o = cat_o.unsqueeze(0).expand(self.hyper.max_text_len, -1, -1, -1).contiguous(
         ).view(-1, self.hyper.max_text_len, self.hyper.hidden_size + self.hyper.bio_emb_size)
 
@@ -296,9 +294,10 @@ class CopyMB(nn.Module):
             # relation logits
             output_logits = self.rel_linear_b(decoder_state.squeeze())
         else:
+            # cat(H_decoder, H_encoders)
             output_logits = torch.cat(
-                (decoder_state.permute(1, 0, 2).expand(-1, self.hyper.max_text_len, -1), copy_o), dim=2)  # hidden 300 + 300 + 50
-
+                (decoder_state.permute(1, 0, 2).expand(-1, self.hyper.max_text_len, -1), copy_o), dim=2)
+            # cat(H_decoder, H_encoders, H_decoder_1)
             output_logits = torch.cat((output_logits, fst_hidden.permute(1,0,2).expand(-1, self.hyper.max_text_len, -1)), dim=2)
 
             output_logits = self.entity_linear_2(self.activation(

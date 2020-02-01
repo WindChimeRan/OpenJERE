@@ -38,6 +38,8 @@ class Hyper(object):
 
         self.__dict__ = json.load(open(path, 'r'))
 
+
+    def vocab_init(self):
         self.word2id = json.load(
             open(os.path.join(self.data_root, 'word_vocab.json'), 'r'))
         self.rel2id = json.load(
@@ -47,10 +49,6 @@ class Hyper(object):
         self.id2word = {k:v for v, k in self.word2id.items()}
         self.id2rel  = {k:v for v, k in self.rel2id.items()}
         self.id2bio = {k:v for v, k in self.bio_vocab.items()}
-
-
-    def __post_init__(self):
-        pass
 
     def join(self, toks: List[str]) -> str:
         if self.seperator == '':
