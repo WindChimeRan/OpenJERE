@@ -186,11 +186,14 @@ class CopyMB(nn.Module):
                 decoder_output, h, output_logits = self._decode_step(
                     i, h, decoder_input, copy_o, fst_hidden)
 
-                idx = torch.argmax(output_logits, dim=1).detach()
+                # idx = torch.argmax(output_logits, dim=1).detach()
                 if i % 2 == 0:
+                    idx = torch.argmax(output_logits, dim=1).detach()
                     decoder_input = self.relation_emb(idx)
                     decoder_result.append(idx.cpu())
                 else:
+                    # TODO: mask
+                    idx = torch.argmax(output_logits, dim=1).detach()
                     copy_index = torch.zeros((B_stacked, L)).scatter_(
                         1, idx.unsqueeze(1).cpu(), 1).bool()
                     decoder_result.append(copy_index.long())
