@@ -16,7 +16,8 @@ from collections import Counter
 
 from torch.optim import Adam, SGD
 
-from lib.preprocessings import Chinese_selection_preprocessing, Chinese_copymb_preprocessing
+from lib.preprocessings import Chinese_selection_preprocessing, Chinese_copymb_preprocessing, Chinese_twotagging_preprocessing
+
 from lib.dataloaders import Selection_Dataset, Selection_loader, Copymb_Dataset, Copymb_loader
 from lib.metrics import F1_triplet
 from lib.models import MultiHeadSelection, CopyMB
@@ -50,6 +51,7 @@ class Runner(object):
         self.optimizer = None
         self.model = None
 
+        # TODO: refactor
         self.Dataset = None
         self.Loader = None
         self._init_loader(self.hyper.model)
@@ -61,6 +63,9 @@ class Runner(object):
         elif name == 'copymb':
             self.Dataset = Copymb_Dataset
             self.Loader = Copymb_loader
+        elif name == 'twotagging':
+            self.Dataset = None
+            self.Loader = None
         else:
             raise ValueError('wrong name!')
 
@@ -74,7 +79,8 @@ class Runner(object):
     def _preprocessor(self, name: str):
         p = {
             'selection': Chinese_selection_preprocessing(self.hyper),
-            'copymb': Chinese_copymb_preprocessing(self.hyper)
+            'copymb': Chinese_copymb_preprocessing(self.hyper),
+            'twotagging': Chinese_twotagging_preprocessing(self.hyper)
         }
         return p[name]
 
@@ -90,7 +96,7 @@ class Runner(object):
     def preprocessing(self):
         self.preprocessor.gen_relation_vocab()
         self.preprocessor.gen_all_data()
-        self.preprocessor.gen_vocab(min_freq=1)
+        self.preprocessor.gen_vocab(min_freq=2)
         # for ner only
         self.preprocessor.gen_bio_vocab()
 
