@@ -3,6 +3,7 @@ import os
 from typing import Optional, List
 from dataclasses import dataclass
 
+
 @dataclass
 class Hyper(object):
     def __init__(self, path: str):
@@ -36,32 +37,34 @@ class Hyper(object):
         self.seperator: str
         self.gpu: int
 
-        self.__dict__ = json.load(open(path, 'r'))
-
+        self.__dict__ = json.load(open(path, "r"))
 
     def vocab_init(self):
         self.word2id = json.load(
-            open(os.path.join(self.data_root, 'word_vocab.json'), 'r'))
+            open(os.path.join(self.data_root, "word_vocab.json"), "r")
+        )
         self.rel2id = json.load(
-            open(os.path.join(self.data_root, 'relation_vocab.json'), 'r'))
+            open(os.path.join(self.data_root, "relation_vocab.json"), "r")
+        )
         self.bio_vocab = json.load(
-            open(os.path.join(self.data_root, 'bio_vocab.json'), 'r'))
-        self.id2word = {k:v for v, k in self.word2id.items()}
-        self.id2rel  = {k:v for v, k in self.rel2id.items()}
-        self.id2bio = {k:v for v, k in self.bio_vocab.items()}
+            open(os.path.join(self.data_root, "bio_vocab.json"), "r")
+        )
+        self.id2word = {k: v for v, k in self.word2id.items()}
+        self.id2rel = {k: v for v, k in self.rel2id.items()}
+        self.id2bio = {k: v for v, k in self.bio_vocab.items()}
 
     def join(self, toks: List[str]) -> str:
-        if self.seperator == '':
-            return ''.join(toks)
-        elif self.seperator == ' ':
-            return ' '.join(toks)
+        if self.seperator == "":
+            return "".join(toks)
+        elif self.seperator == " ":
+            return " ".join(toks)
         else:
-            raise NotImplementedError('other tokenizer?')
-    
+            raise NotImplementedError("other tokenizer?")
+
     def tokenizer(self, text: str) -> List[str]:
-        if self.seperator == '':
+        if self.seperator == "":
             return list(text)
-        elif self.seperator == ' ':
-            return text.split(' ')
+        elif self.seperator == " ":
+            return text.split(" ")
         else:
-            raise NotImplementedError('other tokenizer?')
+            raise NotImplementedError("other tokenizer?")

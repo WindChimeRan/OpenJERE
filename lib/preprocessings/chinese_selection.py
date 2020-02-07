@@ -21,21 +21,24 @@ class Chinese_selection_preprocessing(Chinese):
         if not line:
             return None
         instance = json.loads(line)
-        text = instance['text']
+        text = instance["text"]
 
         bio = None
         selection = None
 
-        if 'spo_list' in instance:
-            spo_list = instance['spo_list']
+        if "spo_list" in instance:
+            spo_list = instance["spo_list"]
 
             if not self._check_valid(text, spo_list):
                 return None
-            spo_list = [{
-                'predicate': spo['predicate'],
-                'object': spo['object'],
-                'subject': spo['subject']
-            } for spo in spo_list]
+            spo_list = [
+                {
+                    "predicate": spo["predicate"],
+                    "object": spo["object"],
+                    "subject": spo["subject"],
+                }
+                for spo in spo_list
+            ]
 
             entities: List[str] = self.spo_to_entities(text, spo_list)
             relations: List[str] = self.spo_to_relations(text, spo_list)
@@ -44,10 +47,10 @@ class Chinese_selection_preprocessing(Chinese):
             selection = self.spo_to_selection(text, spo_list)
 
         result = {
-            'text': text,
-            'spo_list': spo_list,
-            'bio': bio,
-            'selection': selection
+            "text": text,
+            "spo_list": spo_list,
+            "bio": bio,
+            "selection": selection,
         }
         return json.dumps(result, ensure_ascii=False)
 
@@ -58,45 +61,49 @@ class Chinese_selection_preprocessing(Chinese):
         if len(text) > self.hyper.max_text_len:
             return False
         for t in spo_list:
-            if t['object'] not in text or t['subject'] not in text:
+            if t["object"] not in text or t["subject"] not in text:
                 return False
         return True
 
     @overrides
     def gen_vocab(self, min_freq: int):
-        super(Chinese_selection_preprocessing, self).gen_vocab(min_freq, init_result={'<pad>': 0})
+        super(Chinese_selection_preprocessing, self).gen_vocab(
+            min_freq, init_result={"<pad>": 0}
+        )
 
-
-    def spo_to_selection(self, text: str, spo_list: List[Dict[str, str]]
-                         ) -> List[Dict[str, int]]:
+    def spo_to_selection(
+        self, text: str, spo_list: List[Dict[str, str]]
+    ) -> List[Dict[str, int]]:
 
         selection = []
         for triplet in spo_list:
 
-            object = triplet['object']
-            subject = triplet['subject']
+            object = triplet["object"]
+            subject = triplet["subject"]
 
             object_pos = text.find(object) + len(object) - 1
-            relation_pos = self.relation_vocab[triplet['predicate']]
+            relation_pos = self.relation_vocab[triplet["predicate"]]
             subject_pos = text.find(subject) + len(subject) - 1
 
-            selection.append({
-                'subject': subject_pos,
-                'predicate': relation_pos,
-                'object': object_pos
-            })
+            selection.append(
+                {
+                    "subject": subject_pos,
+                    "predicate": relation_pos,
+                    "object": object_pos,
+                }
+            )
 
         return selection
 
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
-        bio = ['O'] * len(text)
+        bio = ["O"] * len(text)
         for e in entities:
             begin = text.find(e)
             end = begin + len(e) - 1
 
             assert end <= len(text)
 
-            bio[begin] = 'B'
+            bio[begin] = "B"
             for i in range(begin + 1, end + 1):
-                bio[i] = 'I'
+                bio[i] = "I"
         return bio

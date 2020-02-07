@@ -24,15 +24,15 @@ class Copymb_Dataset(Abstract_dataset):
         self.bio_list = []
         self.spo_list = []
 
-        for line in open(os.path.join(self.data_root, dataset), 'r'):
+        for line in open(os.path.join(self.data_root, dataset), "r"):
             line = line.strip("\n")
             instance = json.loads(line)
 
-            self.seq_list.append(instance['seq'])
-            self.text_list.append(instance['text'])
-            self.bio_list.append(instance['bio'])
-            self.spo_list.append(instance['spo_list'])
-        
+            self.seq_list.append(instance["seq"])
+            self.text_list.append(instance["text"])
+            self.bio_list.append(instance["bio"])
+            self.spo_list.append(instance["spo_list"])
+
     def __getitem__(self, index):
 
         seq = self.seq_list[index]
@@ -50,31 +50,34 @@ class Copymb_Dataset(Abstract_dataset):
         return len(self.text_list)
 
     def text2tensor(self, text: List[str]) -> torch.tensor:
-        oov = self.word_vocab['oov']
-        padded_list = list(map(lambda x: self.word_vocab.get(x, oov), self.tokenizer(text)))
-        padded_list.extend([self.word_vocab['<pad>']] *
-                           (self.hyper.max_text_len - len(text)))
+        oov = self.word_vocab["oov"]
+        padded_list = list(
+            map(lambda x: self.word_vocab.get(x, oov), self.tokenizer(text))
+        )
+        padded_list.extend(
+            [self.word_vocab["<pad>"]] * (self.hyper.max_text_len - len(text))
+        )
         return torch.tensor(padded_list)
 
     def bio2tensor(self, bio):
         # here we pad bio with "O". Then, in our model, we will mask this "O" padding.
         # in multi-head selection, we will use "<pad>" token embedding instead.
         padded_list = list(map(lambda x: self.bio_vocab[x], bio))
-        padded_list.extend([self.bio_vocab['O']] *
-                           (self.hyper.max_text_len - len(bio)))
+        padded_list.extend([self.bio_vocab["O"]] * (self.hyper.max_text_len - len(bio)))
         return torch.tensor(padded_list)
 
     def seq2tensor(self, text, seq):
         # s p o
         seq_tensor = torch.zeros(
-            (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1)).long()
+            (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1)
+        ).long()
 
         mask_tensor = seq_tensor.bool()
 
-        NA = self.relation_vocab['N']
+        NA = self.relation_vocab["N"]
         for i in range(self.hyper.max_text_len):
             if str(i) not in seq:
-                seq_tensor[i, 0] = NA 
+                seq_tensor[i, 0] = NA
                 mask_tensor[i, 0] = True
         for s, pair in seq.items():
             for i, ptr in enumerate(pair):
@@ -82,7 +85,7 @@ class Copymb_Dataset(Abstract_dataset):
                 mask_tensor[int(s), i] = True
             seq_tensor[int(s), i + 1] = NA
             mask_tensor[int(s), i + 1] = True
-        
+
         assert mask_tensor.sum() > 0
 
         return seq_tensor, mask_tensor
@@ -116,5 +119,4 @@ def collate_fn(batch):
     return Batch_reader(batch)
 
 
-Copymb_loader = partial(
-    DataLoader, collate_fn=collate_fn, pin_memory=True)
+Copymb_loader = partial(DataLoader, collate_fn=collate_fn, pin_memory=True)

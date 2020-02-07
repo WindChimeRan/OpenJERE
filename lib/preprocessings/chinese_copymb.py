@@ -21,12 +21,12 @@ class Chinese_copymb_preprocessing(Chinese):
         if not line:
             return None
         instance = json.loads(line)
-        text = instance['text']
+        text = instance["text"]
 
         bio = None
 
-        if 'spo_list' in instance:
-            spo_list = instance['spo_list']
+        if "spo_list" in instance:
+            spo_list = instance["spo_list"]
 
             if not self._check_valid(text, spo_list):
                 return None
@@ -40,22 +40,15 @@ class Chinese_copymb_preprocessing(Chinese):
             relations: List[str] = self.spo_to_relations(text, spo_list)
 
             bio = self.spo_to_bio(text, entities)
-            
 
-        result = {
-            'text': text,
-            'spo_list': spo_list,
-            'bio': bio,
-            'seq': seq
-        }
+        result = {"text": text, "spo_list": spo_list, "bio": bio, "seq": seq}
         return json.dumps(result, ensure_ascii=False)
-
-
 
     @overrides
     def gen_vocab(self, min_freq: int):
         super(Chinese_copymb_preprocessing, self).gen_vocab(
-            min_freq, init_result={'<pad>': 0, '<eos>': 1})
+            min_freq, init_result={"<pad>": 0, "<eos>": 1}
+        )
 
     @overrides
     def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
@@ -66,11 +59,14 @@ class Chinese_copymb_preprocessing(Chinese):
 
         # if len(set([t['subject'] for t in spo_list])) > self.hyper.max_decode_len:
         #     return False
-        if max(Counter([t['subject'] for t in spo_list]).values()) > self.hyper.max_decode_len:
+        if (
+            max(Counter([t["subject"] for t in spo_list]).values())
+            > self.hyper.max_decode_len
+        ):
             return False
 
         for t in spo_list:
-            if t['object'] not in text or t['subject'] not in text:
+            if t["object"] not in text or t["subject"] not in text:
                 return False
         return True
 
@@ -85,15 +81,17 @@ class Chinese_copymb_preprocessing(Chinese):
         else:
             return True
 
-    def spo_to_seq(self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True) -> Dict[int, List[int]]:
+    def spo_to_seq(
+        self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True
+    ) -> Dict[int, List[int]]:
         dic = {}
         for triplet in spo_list:
 
-            object = triplet['object']
-            subject = triplet['subject']
+            object = triplet["object"]
+            subject = triplet["subject"]
 
             object_pos = text.find(object) + len(object) - 1
-            relation_pos = self.relation_vocab[triplet['predicate']]
+            relation_pos = self.relation_vocab[triplet["predicate"]]
             subject_pos = text.find(subject) + len(subject) - 1
 
             # dangerous!!!
@@ -112,14 +110,14 @@ class Chinese_copymb_preprocessing(Chinese):
         return dic
 
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
-        bio = ['O'] * len(text)
+        bio = ["O"] * len(text)
         for e in entities:
             begin = text.find(e)
             end = begin + len(e) - 1
 
             assert end <= len(text)
 
-            bio[begin] = 'B'
+            bio[begin] = "B"
             for i in range(begin + 1, end + 1):
-                bio[i] = 'I'
+                bio[i] = "I"
         return bio

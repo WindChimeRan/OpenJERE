@@ -24,14 +24,14 @@ class Selection_Dataset(Abstract_dataset):
         self.bio_list = []
         self.spo_list = []
 
-        for line in open(os.path.join(self.data_root, dataset), 'r'):
+        for line in open(os.path.join(self.data_root, dataset), "r"):
             line = line.strip("\n")
             instance = json.loads(line)
 
-            self.selection_list.append(instance['selection'])
-            self.text_list.append(instance['text'])
-            self.bio_list.append(instance['bio'])
-            self.spo_list.append(instance['spo_list'])
+            self.selection_list.append(instance["selection"])
+            self.text_list.append(instance["text"])
+            self.bio_list.append(instance["bio"])
+            self.spo_list.append(instance["spo_list"])
 
     def __getitem__(self, index):
         selection = self.selection_list[index]
@@ -49,32 +49,32 @@ class Selection_Dataset(Abstract_dataset):
         return len(self.text_list)
 
     def text2tensor(self, text: List[str]) -> torch.tensor:
-        oov = self.word_vocab['oov']
+        oov = self.word_vocab["oov"]
         padded_list = list(map(lambda x: self.word_vocab.get(x, oov), text))
-        padded_list.extend([self.word_vocab['<pad>']] *
-                           (self.hyper.max_text_len - len(text)))
+        padded_list.extend(
+            [self.word_vocab["<pad>"]] * (self.hyper.max_text_len - len(text))
+        )
         return torch.tensor(padded_list)
 
     def bio2tensor(self, bio):
         # here we pad bio with "O". Then, in our model, we will mask this "O" padding.
         # in multi-head selection, we will use "<pad>" token embedding instead.
         padded_list = list(map(lambda x: self.bio_vocab[x], bio))
-        padded_list.extend([self.bio_vocab['O']] *
-                           (self.hyper.max_text_len - len(bio)))
+        padded_list.extend([self.bio_vocab["O"]] * (self.hyper.max_text_len - len(bio)))
         return torch.tensor(padded_list)
 
     def selection2tensor(self, text, selection):
         # s p o
         result = torch.zeros(
-            (self.hyper.max_text_len, len(self.relation_vocab),
-             self.hyper.max_text_len))
-        NA = self.relation_vocab['N']
+            (self.hyper.max_text_len, len(self.relation_vocab), self.hyper.max_text_len)
+        )
+        NA = self.relation_vocab["N"]
         result[:, NA, :] = 1
         for triplet in selection:
 
-            object = triplet['object']
-            subject = triplet['subject']
-            predicate = triplet['predicate']
+            object = triplet["object"]
+            subject = triplet["subject"]
+            predicate = triplet["predicate"]
 
             result[subject, predicate, object] = 1
             result[subject, NA, object] = 0
@@ -111,4 +111,3 @@ def collate_fn(batch):
 
 
 Selection_loader = partial(DataLoader, collate_fn=collate_fn, pin_memory=True)
-
