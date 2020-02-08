@@ -83,7 +83,7 @@ class Twotagging(nn.Module):
 
     def masked_BCEloss(self, logits, gt, mask):
         loss = self.BCE(logits, gt)
-        loss = torch.sum(loss.mul(mask))/torch.sum(mask)
+        loss = torch.sum(loss.mul(mask)) / torch.sum(mask)
         return loss
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
@@ -92,15 +92,6 @@ class Twotagging(nn.Module):
 
         t = sample.T.cuda(self.gpu)
         ps_1, ps_2, t, t_max, mask = self.S(t)
-
-
-
-        po_1, po_2 = self.PO(t, t_max, k1, k2)
-
-        po_1 = po_1.permute(0, 2, 1)
-        po_2 = po_2.permute(0, 2, 1)
-
-        selection_loss = 0
 
         if is_train:
             # teacher forcing
@@ -111,13 +102,21 @@ class Twotagging(nn.Module):
             o1 = sample.O1.cuda(self.gpu)
             o2 = sample.O2.cuda(self.gpu)
 
+            po_1, po_2 = self.PO(t, t_max, k1, k2)
+
+            po_1 = po_1.permute(0, 2, 1)
+            po_2 = po_2.permute(0, 2, 1)
+
+            s1 = torch.unsqueeze(s1,2)
+            s2 = torch.unsqueeze(s2,2)
+            
             s1_loss = self.masked_BCEloss(ps_1, s1, mask)
             s2_loss = self.masked_BCEloss(ps_2, s2, mask)
 
-            o1_loss = loss(po_1,o1)
-            o1_loss = torch.sum(o1_loss.mul(mask[:,:,0])) / torch.sum(mask)
-            o2_loss = loss(po_2,o2)
-            o2_loss = torch.sum(o2_loss.mul(mask[:,:,0])) / torch.sum(mask)
+            o1_loss = loss(po_1, o1)
+            o1_loss = torch.sum(o1_loss.mul(mask[:, :, 0])) / torch.sum(mask)
+            o2_loss = loss(po_2, o2)
+            o2_loss = torch.sum(o2_loss.mul(mask[:, :, 0])) / torch.sum(mask)
 
             loss_sum = 2.5 * (s1_loss + s2_loss) + (o1_loss + o2_loss)
 
@@ -125,6 +124,7 @@ class Twotagging(nn.Module):
 
         # output["description"] = partial(self.description, output=output)
         return output
+
 
 class s_model(nn.Module):
     def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size):
