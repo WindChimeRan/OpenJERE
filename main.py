@@ -27,6 +27,7 @@ from lib.dataloaders import (
     Selection_loader,
     Copymb_Dataset,
     Copymb_loader,
+    Twotagging_Dataset
 )
 from lib.metrics import F1_triplet
 from lib.models import MultiHeadSelection, CopyMB
@@ -63,23 +64,25 @@ class Runner(object):
         self.optimizer = None
         self.model = None
 
-        # TODO: refactor
-        self.Dataset = None
-        self.Loader = None
-        self._init_loader(self.hyper.model)
+        # # TODO: refactor
+        # self.Dataset = None
+        # self.Loader = None
+        self.Dataset, self.Loader = self._init_loader(self.hyper.model)
 
-    def _init_loader(self, name):
+    def _init_loader(self, name: str):
         if name == "selection":
-            self.Loader = Selection_loader
-            self.Dataset = Selection_Dataset
+            Loader = Selection_loader
+            Dataset = Selection_Dataset
         elif name == "copymb":
-            self.Dataset = Copymb_Dataset
-            self.Loader = Copymb_loader
+            Dataset = Copymb_Dataset
+            Loader = Copymb_loader
         elif name == "twotagging":
-            self.Dataset = None
-            self.Loader = None
+            Dataset = Twotagging_Dataset
+            Loader = None
         else:
             raise ValueError("wrong name!")
+
+        return Dataset, Loader
 
     def _optimizer(self, name, model):
         m = {"adam": Adam(model.parameters()), "sgd": SGD(model.parameters(), lr=0.5)}
@@ -99,6 +102,8 @@ class Runner(object):
             self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
         elif self.hyper.model == "copymb":
             self.model = CopyMB(self.hyper).cuda(self.gpu)
+        elif self.hyper.model == "twotagging":
+            self.model = None
         else:
             raise NotImplementedError("Future works!")
 
@@ -126,6 +131,10 @@ class Runner(object):
             self.hyper.vocab_init()
             for path in self.hyper.raw_data_list:
                 self.summary_data(path)
+        elif mode == "debug":
+            self.hyper.vocab_init()
+            train_set = self.Dataset(self.hyper, self.hyper.train)
+
         else:
             raise ValueError("invalid mode")
 
@@ -214,7 +223,6 @@ class Runner(object):
             pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
 
             for batch_idx, sample in pbar:
-
                 self.optimizer.zero_grad()
                 output = self.model(sample, is_train=True)
                 loss = output["loss"]
