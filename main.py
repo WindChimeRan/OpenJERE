@@ -145,7 +145,6 @@ class Runner(object):
                     print(sample.text)
                     exit()
 
-
         else:
             raise ValueError("invalid mode")
 

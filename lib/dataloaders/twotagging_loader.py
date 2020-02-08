@@ -25,7 +25,6 @@ from typing import Dict, List, Tuple, Set, Optional
 from .abc_dataset import Abstract_dataset
 
 
-
 def get_now_time():
     a = time.time()
     return time.ctime(a)
@@ -44,7 +43,7 @@ def seq_padding_vec(X):
 
 
 class Twotagging_Dataset(Abstract_dataset):
-    '''
+    """
     T:    text 
 
     # model 1 ground truth
@@ -54,17 +53,24 @@ class Twotagging_Dataset(Abstract_dataset):
     # model 2 ground truth
     K1, K2:  sample one of (S1, S2)
     O1, O2:  corresponding object and relation        
-    '''
+    """
+
     def __init__(self, hyper, dataset):
 
         super(Twotagging_Dataset, self).__init__(hyper, dataset)
 
-
-
         self.spo_list = []
         self.text_list = []
 
-        self.T, self.S1, self.S2, self.K1, self.K2, self.O1, self.O2, = [], [], [], [], [], [], []
+        self.T, self.S1, self.S2, self.K1, self.K2, self.O1, self.O2, = (
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
 
         for line in open(os.path.join(self.data_root, dataset), "r"):
             line = line.strip("\n")
@@ -76,30 +82,30 @@ class Twotagging_Dataset(Abstract_dataset):
             text = instance["text"]
             items = {}
             for sp in instance["spo_list"]:
-                subjectid = text.find(sp['subject'])
-                objectid = text.find(sp['object'])
+                subjectid = text.find(sp["subject"])
+                objectid = text.find(sp["object"])
                 if subjectid != -1 and objectid != -1:
-                    key = (subjectid, subjectid + len(sp['subject']))
+                    key = (subjectid, subjectid + len(sp["subject"]))
                     if key not in items:
                         items[key] = []
                     items[key].append(
-                        (objectid, objectid + len(sp['object']), self.relation_vocab[sp['predicate']])
+                        (
+                            objectid,
+                            objectid + len(sp["object"]),
+                            self.relation_vocab[sp["predicate"]],
+                        )
                     )
             if items:
                 text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in text]
                 self.T.append(text_id)
-                # s1, s2 = [[1,0]] * len(text), [[1,0]] * len(text)
                 s1, s2 = [0] * len(text), [0] * len(text)
                 for j in items:
-                    # s1[j[0]] = [0,1]
-                    # s2[j[1]-1] = [0,1]
+
                     s1[j[0]] = 1
                     s2[j[1] - 1] = 1
-                # print(items)
-                # print(items.keys())
+
                 k1, k2 = choice(list(items.keys()))
-                # print(k1, k2)
-                # exit()
+                # TODO: not sure about unk class
                 o1, o2 = [0] * len(text), [0] * len(text)  # 0是unk类（共49+1个类）
                 for j in items[(k1, k2)]:
                     o1[j[0]] = j[2]
@@ -154,7 +160,7 @@ class Batch_reader(object):
         self.spo_gold = transposed_data[-1]
 
     def pin_memory(self):
-        
+
         self.T = self.T.pin_memory()
         self.S1 = self.S1.pin_memory()
         self.S2 = self.S2.pin_memory()
