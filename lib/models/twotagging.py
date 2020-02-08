@@ -109,13 +109,13 @@ class Twotagging(nn.Module):
 
             s1 = torch.unsqueeze(s1,2)
             s2 = torch.unsqueeze(s2,2)
-            
+
             s1_loss = self.masked_BCEloss(ps_1, s1, mask)
             s2_loss = self.masked_BCEloss(ps_2, s2, mask)
 
-            o1_loss = loss(po_1, o1)
+            o1_loss = self.CE(po_1, o1)
             o1_loss = torch.sum(o1_loss.mul(mask[:, :, 0])) / torch.sum(mask)
-            o2_loss = loss(po_2, o2)
+            o2_loss = self.CE(po_2, o2)
             o2_loss = torch.sum(o2_loss.mul(mask[:, :, 0])) / torch.sum(mask)
 
             loss_sum = 2.5 * (s1_loss + s2_loss) + (o1_loss + o2_loss)
