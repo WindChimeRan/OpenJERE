@@ -31,7 +31,7 @@ from lib.dataloaders import (
     Twotagging_loader,
 )
 from lib.metrics import F1_triplet
-from lib.models import MultiHeadSelection, CopyMB
+from lib.models import MultiHeadSelection, CopyMB, Twotagging
 from lib.config import Hyper
 
 parser = argparse.ArgumentParser()
@@ -101,7 +101,7 @@ class Runner(object):
         elif self.hyper.model == "copymb":
             self.model = CopyMB(self.hyper).cuda(self.gpu)
         elif self.hyper.model == "twotagging":
-            self.model = None
+            self.model = Twotagging(self.hyper).cuda(self.gpu)
         else:
             raise NotImplementedError("Future works!")
 
@@ -131,19 +131,21 @@ class Runner(object):
                 self.summary_data(path)
         elif mode == "debug":
             self.hyper.vocab_init()
-            train_set = self.Dataset(self.hyper, self.hyper.train)
-            loader = self.Loader(
-                train_set,
-                batch_size=self.hyper.batch_size_train,
-                pin_memory=True,
-                num_workers=4,
-            )
-            for epoch in range(self.hyper.epoch_num):
-                pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
+            self._init_model()
+            # train_set = self.Dataset(self.hyper, self.hyper.train)
+            # loader = self.Loader(
+            #     train_set,
+            #     batch_size=self.hyper.batch_size_train,
+            #     pin_memory=True,
+            #     # num_workers=4,
+            # )
+            # for epoch in range(self.hyper.epoch_num):
+            #     pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
 
-                for batch_idx, sample in pbar:
-                    print(sample.text)
-                    exit()
+            #     for batch_idx, sample in pbar:
+
+            #         print(sample.text)
+            #         exit()
 
         else:
             raise ValueError("invalid mode")
@@ -235,6 +237,7 @@ class Runner(object):
             for batch_idx, sample in pbar:
                 self.optimizer.zero_grad()
                 output = self.model(sample, is_train=True)
+
                 loss = output["loss"]
                 loss.backward()
                 self.optimizer.step()
