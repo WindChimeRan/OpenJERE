@@ -46,11 +46,11 @@ class Twotagging_Dataset(Abstract_dataset):
     """
     T:    text 
 
-    # model 1 ground truth
+    ## model 1 ground truth
     S1:      subject_begin
     S2:      subject_end
 
-    # model 2 ground truth
+    ## model 2 ground truth
     K1, K2:  sample one of (S1, S2)
     O1, O2:  corresponding object and relation        
     """
@@ -76,9 +76,6 @@ class Twotagging_Dataset(Abstract_dataset):
             line = line.strip("\n")
             instance = json.loads(line)
 
-            self.text_list.append(instance["text"])
-            self.spo_list.append(instance["spo_list"])
-
             text = instance["text"]
             items = {}
             for sp in instance["spo_list"]:
@@ -96,6 +93,8 @@ class Twotagging_Dataset(Abstract_dataset):
                         )
                     )
             if items:
+                self.text_list.append(instance["text"])
+                self.spo_list.append(instance["spo_list"])
                 text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in text]
                 self.T.append(text_id)
                 s1, s2 = [0] * len(text), [0] * len(text)

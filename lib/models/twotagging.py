@@ -122,6 +122,8 @@ class Twotagging(ABCModel):
             loss_sum = 2.5 * (s1_loss + s2_loss) + (o1_loss + o2_loss)
 
             output["loss"] = loss_sum
+        else:
+            pass
 
         output["description"] = partial(self.description, output=output)
         return output
