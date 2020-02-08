@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 
 from lib.metrics import F1_triplet
+from lib.models.abc_model import ABCModel
 
 
 def seq_max_pool(x):
@@ -55,7 +56,7 @@ def seq_gather(x):
     return res
 
 
-class Twotagging(nn.Module):
+class Twotagging(ABCModel):
     def __init__(self, hyper) -> None:
         super(Twotagging, self).__init__()
         self.hyper = hyper

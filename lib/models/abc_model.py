@@ -1,11 +1,11 @@
+from typing import Dict, List, Tuple, Set, Optional
 from abc import ABC, abstractmethod, abstractstaticmethod
 from torch import nn
 
 import torch
 
 
-class Model(nn.Module):
-    # def __init__(self, hyper) -> None:
+class ABCModel(nn.Module):
 
     @abstractmethod
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:

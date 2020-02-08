@@ -14,9 +14,10 @@ from pytorch_memlab import profile
 
 from lib.tagger.crf import CRF
 from lib.metrics import F1_triplet
+from lib.models.abc_model import ABCModel
 
 
-class CopyMB(nn.Module):
+class CopyMB(ABCModel):
     def __init__(self, hyper) -> None:
         super(CopyMB, self).__init__()
 

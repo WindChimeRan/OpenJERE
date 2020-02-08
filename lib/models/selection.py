@@ -12,9 +12,10 @@ from functools import partial
 
 from lib.tagger.crf import CRF
 from lib.metrics import F1_triplet
+from lib.models.abc_model import ABCModel
 
 
-class MultiHeadSelection(nn.Module):
+class MultiHeadSelection(ABCModel):
     def __init__(self, hyper) -> None:
         super(MultiHeadSelection, self).__init__()
 
