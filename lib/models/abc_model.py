@@ -5,11 +5,7 @@ from torch import nn
 import torch
 
 
-class ABCModel(nn.Module):
-
-    @abstractmethod
-    def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
-        pass
+class ABCModel(ABC, nn.Module):
 
     @abstractmethod
     def run_metrics(self, output):

@@ -123,9 +123,20 @@ class Twotagging(ABCModel):
 
             output["loss"] = loss_sum
 
-        # output["description"] = partial(self.description, output=output)
+        output["description"] = partial(self.description, output=output)
         return output
 
+    @staticmethod
+    def description(epoch, epoch_num, output):
+        return "L: {:.2f}, epoch: {}/{}:".format(
+            output["loss"].item(),
+            epoch,
+            epoch_num,
+        )
+
+    def run_metrics(self, output):
+        # self.metrics(output["selection_triplets"], output["spo_gold"])
+        pass
 
 class s_model(nn.Module):
     def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size):
