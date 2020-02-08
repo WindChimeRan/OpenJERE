@@ -227,7 +227,7 @@ class Runner(object):
             train_set,
             batch_size=self.hyper.batch_size_train,
             pin_memory=True,
-            num_workers=4,
+            num_workers=8,
         )
 
         for epoch in range(self.hyper.epoch_num):
