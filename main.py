@@ -27,7 +27,8 @@ from lib.dataloaders import (
     Selection_loader,
     Copymb_Dataset,
     Copymb_loader,
-    Twotagging_Dataset
+    Twotagging_Dataset,
+    Twotagging_loader,
 )
 from lib.metrics import F1_triplet
 from lib.models import MultiHeadSelection, CopyMB
@@ -64,9 +65,6 @@ class Runner(object):
         self.optimizer = None
         self.model = None
 
-        # # TODO: refactor
-        # self.Dataset = None
-        # self.Loader = None
         self.Dataset, self.Loader = self._init_loader(self.hyper.model)
 
     def _init_loader(self, name: str):
@@ -78,7 +76,7 @@ class Runner(object):
             Loader = Copymb_loader
         elif name == "twotagging":
             Dataset = Twotagging_Dataset
-            Loader = None
+            Loader = Twotagging_loader
         else:
             raise ValueError("wrong name!")
 
@@ -134,6 +132,19 @@ class Runner(object):
         elif mode == "debug":
             self.hyper.vocab_init()
             train_set = self.Dataset(self.hyper, self.hyper.train)
+            loader = self.Loader(
+                train_set,
+                batch_size=self.hyper.batch_size_train,
+                pin_memory=True,
+                num_workers=4,
+            )
+            for epoch in range(self.hyper.epoch_num):
+                pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
+
+                for batch_idx, sample in pbar:
+                    print(sample.text)
+                    exit()
+
 
         else:
             raise ValueError("invalid mode")
