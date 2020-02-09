@@ -47,7 +47,7 @@ parser.add_argument(
     "-m",
     type=str,
     default="train",
-    help="preprocessing|train|evaluation|data_summary",
+    help="preprocessing|train|evaluation|subevaluation|data_summary",
 )
 args = parser.parse_args()
 
@@ -65,22 +65,44 @@ class Runner(object):
         self.optimizer = None
         self.model = None
 
-        self.Dataset, self.Loader = self._init_loader(self.hyper.model)
+        (
+            self.TrainDataset,
+            self.TrainLoader,
+            self.DevDataset,
+            self.DevLoader,
+        ) = self._init_loader(self.hyper.model)
 
     def _init_loader(self, name: str):
+        # if name == "selection":
+        #     Loader = Selection_loader
+        #     Dataset = Selection_Dataset
+        # elif name == "copymb":
+        #     Dataset = Copymb_Dataset
+        #     Loader = Copymb_loader
+        # elif name == "twotagging":
+        #     Dataset = Twotagging_Dataset
+        #     Loader = Twotagging_loader
+        # else:
+        #     raise ValueError("wrong name!")
+
         if name == "selection":
-            Loader = Selection_loader
-            Dataset = Selection_Dataset
+            TrainLoader = DevLoader = Selection_loader
+            TrainDataset = DevDataset = Selection_Dataset
         elif name == "copymb":
-            Dataset = Copymb_Dataset
-            Loader = Copymb_loader
+            TrainDataset = DevDataset = Copymb_Dataset
+            TrainLoader = DevLoader = Copymb_loader
         elif name == "twotagging":
-            Dataset = Twotagging_Dataset
-            Loader = Twotagging_loader
+            TrainDataset = DevDataset = Twotagging_Dataset
+            TrainLoader = DevLoader = Twotagging_loader
+        elif name == "seq2umt":
+            # TODO
+            TrainDataset = None
+            TrainLoader = None
+            DevDataset = None
+            DevLoader = None
         else:
             raise ValueError("wrong name!")
-
-        return Dataset, Loader
+        return TrainDataset, TrainLoader, DevDataset, DevLoader
 
     def _optimizer(self, name, model):
         m = {"adam": Adam(model.parameters()), "sgd": SGD(model.parameters(), lr=0.5)}
@@ -124,11 +146,22 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             self.load_model(epoch=self.hyper.evaluation_epoch)
-            self.evaluation()
+            dev_set = self.DevDataset(self.hyper, self.hyper.dev)
+            loader = self.DevLoader(
+                dev_set,
+                batch_size=self.hyper.batch_size_eval,
+                pin_memory=True,
+                num_workers=8,
+            )
+            self.evaluation(loader)
+
         elif mode == "data_summary":
             self.hyper.vocab_init()
             for path in self.hyper.raw_data_list:
                 self.summary_data(path)
+        elif mode == "subevaluation":
+            raise NotImplementedError("subevaluation")
+
         elif mode == "debug":
             self.hyper.vocab_init()
             self._init_model()
@@ -164,6 +197,7 @@ class Runner(object):
         )
 
     def summary_data(self, dataset):
+        # TODO
         data = self.Dataset(self.hyper, dataset)
         loader = self.Loader(data, batch_size=400, pin_memory=True, num_workers=4)
 
@@ -182,14 +216,14 @@ class Runner(object):
         print(Counter(triplet_num))
         print("\n")
 
-    def evaluation(self):
-        dev_set = self.Dataset(self.hyper, self.hyper.dev)
-        loader = self.Loader(
-            dev_set,
-            batch_size=self.hyper.batch_size_eval,
-            pin_memory=True,
-            num_workers=4,
-        )
+    def evaluation(self, loader):
+        # dev_set = self.DevDataset(self.hyper, self.hyper.dev)
+        # loader = self.DevLoader(
+        #     dev_set,
+        #     batch_size=self.hyper.batch_size_eval,
+        #     pin_memory=True,
+        #     num_workers=4,
+        # )
         self.model.metrics.reset()
         self.model.eval()
 
@@ -222,17 +256,26 @@ class Runner(object):
             )
 
     def train(self):
-        train_set = self.Dataset(self.hyper, self.hyper.train)
-        loader = self.Loader(
+        train_set = self.TrainDataset(self.hyper, self.hyper.train)
+        train_loader = self.TrainLoader(
             train_set,
             batch_size=self.hyper.batch_size_train,
             pin_memory=True,
             num_workers=8,
         )
+        dev_set = self.DevDataset(self.hyper, self.hyper.dev)
+        dev_loader = self.DevLoader(
+            dev_set,
+            batch_size=self.hyper.batch_size_eval,
+            pin_memory=True,
+            num_workers=4,
+        )
 
         for epoch in range(self.hyper.epoch_num):
             self.model.train()
-            pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
+            pbar = tqdm(
+                enumerate(BackgroundGenerator(train_loader)), total=len(train_loader)
+            )
 
             for batch_idx, sample in pbar:
                 self.optimizer.zero_grad()
@@ -245,9 +288,8 @@ class Runner(object):
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
 
             self.save_model(epoch)
-            # TODO
-            # if epoch % self.hyper.print_epoch == 0 and epoch != 0:
-            #     self.evaluation()
+            if epoch % self.hyper.print_epoch == 0 and epoch > 2:
+                self.evaluation(dev_loader)
 
 
 if __name__ == "__main__":
