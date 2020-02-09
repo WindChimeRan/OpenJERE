@@ -1,6 +1,8 @@
+# https://github.com/zhengyima/kg-baseline-pytorch/tree/master
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 import json
 import os
@@ -69,6 +71,8 @@ class Twotagging(ABCModel):
         self.relation_vocab = json.load(
             open(os.path.join(self.data_root, "relation_vocab.json"), "r")
         )
+        self.id2word = {v: k for k, v in self.word_vocab.items()}
+        self.id2rel = {v: k for k, v in self.relation_vocab.items()}
 
         self.S = s_model(
             len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
@@ -81,17 +85,69 @@ class Twotagging(ABCModel):
         )  # 49
         self.CE = torch.nn.CrossEntropyLoss()
         self.BCE = torch.nn.BCEWithLogitsLoss()
+        self.metrics = F1_triplet()
+        self.get_metric = self.metrics.get_metric
 
     def masked_BCEloss(self, logits, gt, mask):
         loss = self.BCE(logits, gt)
         loss = torch.sum(loss.mul(mask)) / torch.sum(mask)
         return loss
 
+    def inference(self, text_id) -> List[List[Dict[str, str]]]:
+        text = text_id.tolist()
+        text = [[self.id2word[c] for c in sent] for sent in text]
+        result = []
+        for i, sent in enumerate(text):
+            triplets = self.extract_items(sent, text_id[i, :].unsqueeze(0).contiguous())
+            result.append(triplets)
+        return result
+
+    def extract_items(self, sent, text_id) -> List[Dict[str, str]]:
+        R = []
+        _k1, _k2, t, t_max, mask = self.S(text_id)
+
+        _k1, _k2 = _k1[0, :, 0], _k2[0, :, 0]
+        _kk1s = []
+        for i, _kk1 in enumerate(_k1):
+            if _kk1 > 0.5:
+                _subject = ""
+                for j, _kk2 in enumerate(_k2[i:]):
+                    if _kk2 > 0.5:
+                        _subject = self.hyper.join(sent[i : i + j + 1])
+                        break
+                if _subject:
+                    _k1, _k2 = (
+                        torch.LongTensor([[i]]),
+                        torch.LongTensor([[i + j]]),
+                    )  # np.array([i]), np.array([i+j])
+                    _o1, _o2 = self.PO(t.cuda(), t_max.cuda(), _k1.cuda(), _k2.cuda())
+                    _o1, _o2 = _o1.cpu().data.numpy(), _o2.cpu().data.numpy()
+
+                    _o1, _o2 = np.argmax(_o1[0], 1), np.argmax(_o2[0], 1)
+
+                    for i, _oo1 in enumerate(_o1):
+                        if _oo1 > 0:
+                            for j, _oo2 in enumerate(_o2[i:]):
+                                if _oo2 == _oo1:
+                                    _object = self.hyper.join(sent[i : i + j + 1])
+                                    _predicate = self.id2rel[_oo1]
+                                    R.append(
+                                        {
+                                            "subject": _subject,
+                                            "predicate": _predicate,
+                                            "object": _object,
+                                        }
+                                    )
+                                    break
+            _kk1s.append(_kk1.data.cpu().numpy())
+        _kk1s = np.array(_kk1s)
+        return R
+
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
         output = {}
 
-        t = sample.T.cuda(self.gpu)
+        t = text_id = sample.T.cuda(self.gpu)
         ps_1, ps_2, t, t_max, mask = self.S(t)
 
         if is_train:
@@ -108,8 +164,8 @@ class Twotagging(ABCModel):
             po_1 = po_1.permute(0, 2, 1)
             po_2 = po_2.permute(0, 2, 1)
 
-            s1 = torch.unsqueeze(s1,2)
-            s2 = torch.unsqueeze(s2,2)
+            s1 = torch.unsqueeze(s1, 2)
+            s2 = torch.unsqueeze(s2, 2)
 
             s1_loss = self.masked_BCEloss(ps_1, s1, mask)
             s2_loss = self.masked_BCEloss(ps_2, s2, mask)
@@ -123,7 +179,8 @@ class Twotagging(ABCModel):
 
             output["loss"] = loss_sum
         else:
-            pass
+            output["decode_result"] = self.inference(text_id)
+            output["spo_gold"] = sample.spo_gold
 
         output["description"] = partial(self.description, output=output)
         return output
@@ -131,14 +188,12 @@ class Twotagging(ABCModel):
     @staticmethod
     def description(epoch, epoch_num, output):
         return "L: {:.2f}, epoch: {}/{}:".format(
-            output["loss"].item(),
-            epoch,
-            epoch_num,
+            output["loss"].item(), epoch, epoch_num,
         )
 
     def run_metrics(self, output):
-        # self.metrics(output["selection_triplets"], output["spo_gold"])
-        pass
+        self.metrics(output["decode_result"], output["spo_gold"])
+
 
 class s_model(nn.Module):
     def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size):

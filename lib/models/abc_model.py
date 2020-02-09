@@ -6,7 +6,6 @@ import torch
 
 
 class ABCModel(ABC, nn.Module):
-
     @abstractmethod
     def run_metrics(self, output):
         pass
