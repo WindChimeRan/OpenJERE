@@ -113,6 +113,7 @@ class Runner(object):
             "selection": Chinese_selection_preprocessing(self.hyper),
             "copymb": Chinese_copymb_preprocessing(self.hyper),
             "twotagging": Chinese_twotagging_preprocessing(self.hyper),
+            "seq2umt": None,
         }
         return p[name]
 

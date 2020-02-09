@@ -71,7 +71,6 @@ class Chinese_copymb_preprocessing(Chinese):
         return True
 
     def _check_seq(self, seq):
-        # TODO
         # The original goal of this function is to check the length of the decoder given [subject].
         # decoded sequece: p_1, o_1, p_2, o_2, p_3, o_3....
         # but it can also be p_1, p_2, p_3, then use p_1 to select [o_1, o_2], use p_2 to select [o_3]...

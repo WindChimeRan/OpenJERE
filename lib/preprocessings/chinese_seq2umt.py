@@ -11,9 +11,9 @@ from cached_property import cached_property
 from lib.preprocessings.abc_preprocessor import Chinese
 
 
-class Chinese_selection_preprocessing(Chinese):
+class Chinese_seq2umt_preprocessing(Chinese):
     def __init__(self, hyper):
-        super(Chinese_selection_preprocessing, self).__init__(hyper)
+        super(Chinese_seq2umt_preprocessing, self).__init__(hyper)
 
     @overrides
     def _read_line(self, line: str) -> Optional[str]:
@@ -69,25 +69,59 @@ class Chinese_selection_preprocessing(Chinese):
                 }
                 for spo in spo_list
             ]
-
-        result = [json.dumps({"text": text, "spo_list": [spo]}, ensure_ascii=False) for spo in spo_list]
+        # result = [
+        #     {"text": text, "spo_list": [spo], "seq": self.spo_to_seq(text, spo_list)}
+        #     for spo in spo_list
+        # ]
+        result = self.spo_to_seq(text, spo_list)
+        result = [json.dumps(r, ensure_ascii=False) for r in result]
         return result
+    
+    def spo_to_tree(self, spo_list: List[Dict[str, str]]):
+        pass
+
+    def spo_to_seq(self, text: str, spo_list: List[Dict[str, str]]):
+        # seq: rel, head, tail
+        predicate = spo["predicate"]
+        object = spo["object"]
+        subject = spo["subject"]
+
+        predicate_id = self.relation_vocab[predicate]
+        tokens = self.hyper.tokenizer(text)
+
+        s1, s2, o1, o2 = [[0] * len(text) for _ in range(4)]
+
+        subjectid = tokens.find(subject)
+        objectid = tokens.find(object)
+
+        assert subjectid !=1 and objectid != 1
+
+        if subjectid != -1 and objectid != -1:
+            key = (subjectid, subjectid + len(sp["subject"]))
+            if key not in items:
+                items[key] = []
+            items[key].append(
+                (
+                    objectid,
+                    objectid + len(sp["object"]),
+                    self.relation_vocab[sp["predicate"]],
+                )
+            )
+        pass
 
     @overrides
     def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
-        # TODO: ???
-        # if spo_list == []:
-        #     return False
-        # if len(text) > self.hyper.max_text_len:
-        #     return False
-        # for t in spo_list:
-        #     if t["object"] not in text or t["subject"] not in text:
-        #         return False
+        if spo_list == []:
+            return False
+
+        for t in spo_list:
+            if t["object"] not in text or t["subject"] not in text:
+                return False
         return True
 
     @overrides
     def gen_vocab(self, min_freq: int):
-        super(Chinese_selection_preprocessing, self).gen_vocab(
+        super(Chinese_seq2umt_preprocessing, self).gen_vocab(
             min_freq, init_result={"<pad>": 0}
         )
 
