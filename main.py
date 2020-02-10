@@ -30,6 +30,8 @@ from lib.dataloaders import (
     Copymb_loader,
     Twotagging_Dataset,
     Twotagging_loader,
+    Seq2umt_Dataset,
+    Seq2umt_loader,
 )
 from lib.metrics import F1_triplet
 from lib.models import MultiHeadSelection, CopyMB, Twotagging
@@ -66,44 +68,30 @@ class Runner(object):
         self.optimizer = None
         self.model = None
 
-        (
-            self.TrainDataset,
-            self.TrainLoader,
-            self.DevDataset,
-            self.DevLoader,
-        ) = self._init_loader(self.hyper.model)
+        self.Dataset, self.Loader = self._init_loader(self.hyper.model)
 
     def _init_loader(self, name: str):
-        # if name == "selection":
-        #     Loader = Selection_loader
-        #     Dataset = Selection_Dataset
-        # elif name == "copymb":
-        #     Dataset = Copymb_Dataset
-        #     Loader = Copymb_loader
-        # elif name == "twotagging":
-        #     Dataset = Twotagging_Dataset
-        #     Loader = Twotagging_loader
-        # else:
-        #     raise ValueError("wrong name!")
 
         if name == "selection":
-            TrainLoader = DevLoader = Selection_loader
-            TrainDataset = DevDataset = Selection_Dataset
+
+            Dataset = Selection_Dataset
+            Loader = Selection_loader
         elif name == "copymb":
-            TrainDataset = DevDataset = Copymb_Dataset
-            TrainLoader = DevLoader = Copymb_loader
+
+            Dataset = Copymb_Dataset
+            Loader = Copymb_loader
         elif name == "twotagging":
-            TrainDataset = DevDataset = Twotagging_Dataset
-            TrainLoader = DevLoader = Twotagging_loader
+
+            Dataset = Twotagging_Dataset
+            Loader = Twotagging_loader
         elif name == "seq2umt":
-            # TODO
-            TrainDataset = None
-            TrainLoader = None
-            DevDataset = None
-            DevLoader = None
+
+            Dataset = Seq2umt_Dataset
+            Loader = Seq2umt_loader
+
         else:
             raise ValueError("wrong name!")
-        return TrainDataset, TrainLoader, DevDataset, DevLoader
+        return Dataset, Loader
 
     def _optimizer(self, name, model):
         m = {"adam": Adam(model.parameters()), "sgd": SGD(model.parameters(), lr=0.5)}
@@ -126,6 +114,8 @@ class Runner(object):
             self.model = CopyMB(self.hyper).cuda(self.gpu)
         elif self.hyper.model == "twotagging":
             self.model = Twotagging(self.hyper).cuda(self.gpu)
+        elif self.hyper.model == "seq2umt":
+            self.model = NotImplementedError("seq2umt not implemented!")
         else:
             raise NotImplementedError("Future works!")
 
@@ -166,21 +156,23 @@ class Runner(object):
 
         elif mode == "debug":
             self.hyper.vocab_init()
-            self._init_model()
-            # train_set = self.Dataset(self.hyper, self.hyper.train)
-            # loader = self.Loader(
-            #     train_set,
-            #     batch_size=self.hyper.batch_size_train,
-            #     pin_memory=True,
-            #     # num_workers=4,
-            # )
-            # for epoch in range(self.hyper.epoch_num):
-            #     pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
+            # self._init_model()
+            train_set = self.Dataset(self.hyper, self.hyper.dev)
+            loader = self.Loader(
+                train_set,
+                batch_size=self.hyper.batch_size_train,
+                pin_memory=True,
+                num_workers=0,
+            )
+            for epoch in range(self.hyper.epoch_num):
+                pbar = tqdm(enumerate(BackgroundGenerator(loader)), total=len(loader))
 
-            #     for batch_idx, sample in pbar:
+                for batch_idx, sample in pbar:
 
-            #         print(sample.text)
-            #         exit()
+                    print(sample.text)
+                    print(sample.R_gt)
+                    print(sample.R_in)
+                    exit()
 
         else:
             raise ValueError("invalid mode")
@@ -258,15 +250,15 @@ class Runner(object):
             )
 
     def train(self):
-        train_set = self.TrainDataset(self.hyper, self.hyper.train)
-        train_loader = self.TrainLoader(
+        train_set = self.Dataset(self.hyper, self.hyper.train)
+        train_loader = self.Loader(
             train_set,
             batch_size=self.hyper.batch_size_train,
             pin_memory=True,
             num_workers=8,
         )
-        dev_set = self.DevDataset(self.hyper, self.hyper.dev)
-        dev_loader = self.DevLoader(
+        dev_set = self.Dataset(self.hyper, self.hyper.dev)
+        dev_loader = self.Loader(
             dev_set,
             batch_size=self.hyper.batch_size_eval,
             pin_memory=True,

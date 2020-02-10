@@ -246,7 +246,7 @@ class Chinese_seq2umt_preprocessing(Chinese):
     @overrides
     def gen_all_data(self):
         print("Override gen_all_data: Different formats of train/dev!")
-        
+
         for path in self.hyper.raw_data_list:
             if path == "train_data.json":
                 self.gen_train_data(path)

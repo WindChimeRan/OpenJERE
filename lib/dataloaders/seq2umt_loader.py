@@ -43,18 +43,6 @@ def seq_padding_vec(X):
 
 
 class Seq2umt_Dataset(Abstract_dataset):
-    """
-    T:    text 
-
-    ## model 1 ground truth
-    S1:      subject_begin
-    S2:      subject_end
-
-    ## model 2 ground truth
-    K1, K2:  sample one of (S1, S2)
-    O1, O2:  corresponding object and relation        
-    """
-
     def __init__(self, hyper, dataset):
 
         super(Seq2umt_Dataset, self).__init__(hyper, dataset)
@@ -62,66 +50,62 @@ class Seq2umt_Dataset(Abstract_dataset):
         self.spo_list = []
         self.text_list = []
 
-        self.T, self.S1, self.S2, self.K1, self.K2, self.O1, self.O2, = (
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-        )
+        (
+            self.T,
+            self.S1,
+            self.S2,
+            self.K1_in,
+            self.K2_in,
+            self.O1,
+            self.O2,
+            self.R_in,
+            self.R_gt,
+        ) = ([] for _ in range(9))
 
         for line in open(os.path.join(self.data_root, dataset), "r"):
             line = line.strip("\n")
             instance = json.loads(line)
 
             text = instance["text"]
-            items = {}
-            for sp in instance["spo_list"]:
-                subjectid = text.find(sp["subject"])
-                objectid = text.find(sp["object"])
-                if subjectid != -1 and objectid != -1:
-                    key = (subjectid, subjectid + len(sp["subject"]))
-                    if key not in items:
-                        items[key] = []
-                    items[key].append(
-                        (
-                            objectid,
-                            objectid + len(sp["object"]),
-                            self.relation_vocab[sp["predicate"]],
-                        )
-                    )
-            if items:
-                self.text_list.append(instance["text"])
-                self.spo_list.append(instance["spo_list"])
-                text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in text]
-                self.T.append(text_id)
-                s1, s2 = [0] * len(text), [0] * len(text)
-                for j in items:
+            spo_list = instance["spo_list"]
 
-                    s1[j[0]] = 1
-                    s2[j[1] - 1] = 1
+            text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in text]
+            self.T.append(text_id)
 
-                k1, k2 = choice(list(items.keys()))
-                # TODO: not sure about unk class
-                o1, o2 = [0] * len(text), [0] * len(text)  # 0是unk类（共49+1个类）
-                for j in items[(k1, k2)]:
-                    o1[j[0]] = j[2]
-                    o2[j[1] - 1] = j[2]
-                self.S1.append(s1)
-                self.S2.append(s2)
-                self.K1.append([k1])
-                self.K2.append([k2 - 1])
-                self.O1.append(o1)
-                self.O2.append(o2)
+            # training
+            r = instance.get("r", 0)
+            k1 = instance.get("k1", 0)
+            k2 = instance.get("k2", 0)
+            rel_gt = instance.get("rel_gt", [])
+            s1_gt = instance.get("s1_gt", [])
+            s2_gt = instance.get("s2_gt", [])
+            o1_gt = instance.get("o1_gt", [])
+            o2_gt = instance.get("o2_gt", [])
+
+            self.text_list.append(text)
+            self.spo_list.append(spo_list)
+
+            self.S1.append(s1_gt)
+            self.S2.append(s2_gt)
+            self.O1.append(o1_gt)
+            self.O2.append(o2_gt)
+            self.R_gt.append(rel_gt)
+
+            self.R_in.append(r)
+            self.K1_in.append(k1)
+            self.K2_in.append(k2)
 
         self.T = np.array(seq_padding(self.T))
+
+        # training
         self.S1 = np.array(seq_padding(self.S1))
         self.S2 = np.array(seq_padding(self.S2))
         self.O1 = np.array(seq_padding(self.O1))
         self.O2 = np.array(seq_padding(self.O2))
-        self.K1, self.K2 = np.array(self.K1), np.array(self.K2)
+        self.R_gt = np.array(self.R_gt)
+
+        self.K1_in, self.K2_in = np.array(self.K1_in), np.array(self.K2_in)
+        self.R_in = np.array(self.R_in)
 
     def __getitem__(self, index):
 
@@ -129,10 +113,12 @@ class Seq2umt_Dataset(Abstract_dataset):
             self.T[index],
             self.S1[index],
             self.S2[index],
-            self.K1[index],
-            self.K2[index],
             self.O1[index],
             self.O2[index],
+            self.R_gt[index],
+            self.R_in[index],
+            self.K1_in[index],
+            self.K2_in[index],
             self.text_list[index],
             len(self.text_list[index]),
             self.spo_list[index],
@@ -149,24 +135,32 @@ class Batch_reader(object):
         self.T = torch.LongTensor(transposed_data[0])
         self.S1 = torch.FloatTensor(transposed_data[1])
         self.S2 = torch.FloatTensor(transposed_data[2])
-        self.K1 = torch.LongTensor(transposed_data[3])
-        self.K2 = torch.LongTensor(transposed_data[4])
-        self.O1 = torch.LongTensor(transposed_data[5])
-        self.O2 = torch.LongTensor(transposed_data[6])
+        self.O1 = torch.LongTensor(transposed_data[3])
+        self.O2 = torch.LongTensor(transposed_data[4])
 
-        self.text = transposed_data[7]
-        self.length = transposed_data[8]
-        self.spo_gold = transposed_data[-1]
+        self.R_gt = torch.LongTensor(transposed_data[5])
+        self.R_in = torch.LongTensor(transposed_data[6])
+
+        self.K1 = torch.LongTensor(transposed_data[7])
+        self.K2 = torch.LongTensor(transposed_data[8])
+
+        self.text = transposed_data[9]
+        self.length = transposed_data[10]
+        self.spo_gold = transposed_data[11]
 
     def pin_memory(self):
 
         self.T = self.T.pin_memory()
         self.S1 = self.S1.pin_memory()
         self.S2 = self.S2.pin_memory()
-        self.K1 = self.K1.pin_memory()
-        self.K2 = self.K2.pin_memory()
         self.O1 = self.O1.pin_memory()
         self.O2 = self.O2.pin_memory()
+
+        self.R_gt = self.R_gt.pin_memory()
+        self.R_in = self.R_in.pin_memory()
+
+        self.K1 = self.K1.pin_memory()
+        self.K2 = self.K2.pin_memory()
 
         return self
 
@@ -175,4 +169,4 @@ def collate_fn(batch):
     return Batch_reader(batch)
 
 
-Twotagging_loader = partial(DataLoader, collate_fn=collate_fn, pin_memory=True)
+Seq2umt_loader = partial(DataLoader, collate_fn=collate_fn, pin_memory=True)
