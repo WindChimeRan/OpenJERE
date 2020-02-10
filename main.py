@@ -20,6 +20,7 @@ from lib.preprocessings import (
     Chinese_selection_preprocessing,
     Chinese_copymb_preprocessing,
     Chinese_twotagging_preprocessing,
+    Chinese_seq2umt_preprocessing,
 )
 
 from lib.dataloaders import (
@@ -39,7 +40,7 @@ parser.add_argument(
     "--exp_name",
     "-e",
     type=str,
-    default="chinese_copymb_re",
+    default="chinese_seq2umt_re",
     help="experiments/exp_name.json",
 )
 parser.add_argument(
@@ -113,7 +114,7 @@ class Runner(object):
             "selection": Chinese_selection_preprocessing(self.hyper),
             "copymb": Chinese_copymb_preprocessing(self.hyper),
             "twotagging": Chinese_twotagging_preprocessing(self.hyper),
-            "seq2umt": None,
+            "seq2umt": Chinese_seq2umt_preprocessing(self.hyper),
         }
         return p[name]
 
