@@ -1,4 +1,3 @@
-# https://github.com/zhengyima/kg-baseline-pytorch/tree/master
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -76,11 +75,31 @@ class Seq2umt(ABCModel):
         self.BCE = torch.nn.BCEWithLogitsLoss()
         self.metrics = F1_triplet()
         self.get_metric = self.metrics.get_metric
+        self.encoder = Encoder(
+            len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
+        )
 
     def masked_BCEloss(self, logits, gt, mask):
         loss = self.BCE(logits, gt)
         loss = torch.sum(loss.mul(mask)) / torch.sum(mask)
         return loss
+
+    @staticmethod
+    def description(epoch, epoch_num, output):
+        return "L: {:.2f}, epoch: {}/{}:".format(
+            output["loss"].item(), epoch, epoch_num,
+        )
+
+    def run_metrics(self, output):
+        self.metrics(output["decode_result"], output["spo_gold"])    
+        
+    def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
+
+        output = {}
+
+        t = text_id = sample.T.cuda(self.gpu)
+
+        h = self.encoder(t)
 
 
 class Encoder(nn.Module):
@@ -128,41 +147,48 @@ class Encoder(nn.Module):
         t_dim = list(t.size())[-1]
         h = seq_and_vec([t, t_max])
 
+        print(h.size())
+
         h = h.permute(0, 2, 1)
+        print(h.size())
         h = self.conv1(h)
+        print(h.size())
 
         h = h.permute(0, 2, 1)
-
+        print(h.size())
+        exit()
         ps1 = self.fc_ps1(h)
         ps2 = self.fc_ps2(h)
 
         return [ps1, ps2, t, t_max, mask]
 
 
-class Rel_in_entity_out(nn.Module):
-    def __init__(self, decoder):
-        super(Rel_in_entity_out, self).__init__()
+
+
+class Rel2Ent(nn.Module):
+    def __init__(self):
+        super(Rel2Ent, self).__init__()
         pass
 
-    def forward(self, *input, **kwargs):
-        pass
-
-
-class Entity_in_entity_out(nn.Module):
-    def __init__(self, decoder):
-        super(Entity_in_entity_out, self).__init__()
-        pass
-
-    def forward(self, *input, **kwargs):
+    def forward(self, decoder):
         pass
 
 
-class Entity_in_rel_out(nn.Module):
-    def __init__(self, decoder):
-        super(Entity_in_rel_out, self).__init__()
+class Ent2Ent(nn.Module):
+    def __init__(self):
+        super(Ent2Ent, self).__init__()
         pass
 
-    def forward(self, *input, **kwargs):
+    def forward(self, decoder):
+        pass
+
+
+class Ent2Rel(nn.Module):
+    def __init__(self):
+        super(Ent2Rel, self).__init__()
+        pass
+
+    def forward(self, decoder):
         pass
 
 

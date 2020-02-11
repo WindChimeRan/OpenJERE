@@ -34,7 +34,7 @@ from lib.dataloaders import (
     Seq2umt_loader,
 )
 from lib.metrics import F1_triplet
-from lib.models import MultiHeadSelection, CopyMB, Twotagging
+from lib.models import MultiHeadSelection, CopyMB, Twotagging, Seq2umt
 from lib.config import Hyper
 
 parser = argparse.ArgumentParser()
@@ -115,7 +115,7 @@ class Runner(object):
         elif self.hyper.model == "twotagging":
             self.model = Twotagging(self.hyper).cuda(self.gpu)
         elif self.hyper.model == "seq2umt":
-            self.model = NotImplementedError("seq2umt not implemented!")
+            self.model = Seq2umt(self.hyper).cuda(self.gpu)
         else:
             raise NotImplementedError("Future works!")
 
@@ -138,8 +138,8 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             self.load_model(epoch=self.hyper.evaluation_epoch)
-            dev_set = self.DevDataset(self.hyper, self.hyper.dev)
-            loader = self.DevLoader(
+            dev_set = self.Dataset(self.hyper, self.hyper.dev)
+            loader = self.Loader(
                 dev_set,
                 batch_size=self.hyper.batch_size_eval,
                 pin_memory=True,
