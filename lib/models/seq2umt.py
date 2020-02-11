@@ -13,6 +13,7 @@ from functools import partial
 from lib.metrics import F1_triplet
 from lib.models.abc_model import ABCModel
 
+activation = F.gelu
 
 def seq_max_pool(x):
     """seq是[None, seq_len, s_size]的格式，
@@ -78,6 +79,9 @@ class Seq2umt(ABCModel):
         self.encoder = Encoder(
             len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
         )
+        self.decoder = Decoder(
+            len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
+        )
 
     def masked_BCEloss(self, logits, gt, mask):
         loss = self.BCE(logits, gt)
@@ -92,7 +96,7 @@ class Seq2umt(ABCModel):
 
     def run_metrics(self, output):
         self.metrics(output["decode_result"], output["spo_gold"])    
-        
+
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
         output = {}
@@ -117,7 +121,7 @@ class Encoder(nn.Module):
             num_layers=1,
             batch_first=True,
             bidirectional=True,
-        ).cuda()
+        )
 
         self.lstm2 = nn.LSTM(
             input_size=word_emb_size,
@@ -125,7 +129,20 @@ class Encoder(nn.Module):
             num_layers=1,
             batch_first=True,
             bidirectional=True,
-        ).cuda()
+        )
+
+        self.conv1 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=word_emb_size * 2,  # 输入的深度
+                out_channels=word_emb_size,  # filter 的个数，输出的高度
+                kernel_size=3,  # filter的长与宽
+                stride=1,  # 每隔多少步跳一下
+                padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
+            ).cuda(),
+            nn.ReLU().cuda(),
+        )
+
+        # self.comb = nn.Linear(word_emb_size * 2, word_emb_size)
 
     def forward(self, t):
         # TODO
@@ -142,28 +159,60 @@ class Encoder(nn.Module):
         t, (h_n, c_n) = self.lstm1(t, None)
         t, (h_n, c_n) = self.lstm2(t, None)
 
+        # print(t.size()) # 64, 300, 128
+        # print(h_n.size()) # 2, 64, 64
+        # exit()
+        # h = torch.cat((h_n[0], h_n[1]), dim=-1) # 64, 128
+
         t_max, t_max_index = seq_max_pool([t, mask])
 
         t_dim = list(t.size())[-1]
-        h = seq_and_vec([t, t_max])
+        o = seq_and_vec([t, t_max])
 
-        print(h.size())
+        # # print(h.size()) # 64, 300, 256
 
-        h = h.permute(0, 2, 1)
-        print(h.size())
-        h = self.conv1(h)
-        print(h.size())
+        o = o.permute(0, 2, 1)
+        # # print(h.size()) # 64, 256, 300
+        o = self.conv1(o)
+        # # print(h.size()) # 64, 128, 300
 
-        h = h.permute(0, 2, 1)
-        print(h.size())
-        exit()
-        ps1 = self.fc_ps1(h)
-        ps2 = self.fc_ps2(h)
+        o = o.permute(0, 2, 1)
+        # print(h.size()) # 64, 300, 128
+        # exit()
+        # ps1 = self.fc_ps1(h)
+        # ps2 = self.fc_ps2(h)
 
-        return [ps1, ps2, t, t_max, mask]
+        # return [ps1, ps2, t, t_max, mask]
+        return o, h_n
 
+class Decoder(nn.Module):
+    def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size):
+        super(Decoder, self).__init__()
 
+        self.embeds = nn.Embedding(word_dict_length, word_emb_size).cuda()
+        self.fc1_dropout = nn.Sequential(
+            nn.Dropout(0.25).cuda(),  # drop 20% of the neuron
+        ).cuda()
 
+        self.lstm1 = nn.LSTM(
+            input_size=word_emb_size,
+            hidden_size=int(word_emb_size / 2),
+            num_layers=1,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        self.lstm2 = nn.LSTM(
+            input_size=word_emb_size,
+            hidden_size=int(word_emb_size / 2),
+            num_layers=1,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+    def forward(self, input, o, h):
+        # https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
+        pass
 
 class Rel2Ent(nn.Module):
     def __init__(self):
