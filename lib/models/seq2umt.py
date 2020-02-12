@@ -83,10 +83,13 @@ class Seq2umt(ABCModel):
             len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
         )
         self.decoder = Decoder(
-            len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
+            len(self.word_vocab),
+            self.hyper.emb_size,
+            self.hyper.hidden_size,
+            len(self.relation_vocab),
+            self.gpu,
         )
         self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.hyper.emb_size)
-
 
     def masked_BCEloss(self, logits, gt, mask):
         loss = self.BCE(logits, gt)
@@ -108,16 +111,10 @@ class Seq2umt(ABCModel):
 
         t = text_id = sample.T.cuda(self.gpu)
         B = t.size(0)
-        sos = (
-            self.sos(torch.tensor(0).cuda(self.gpu))
-            .unsqueeze(0)
-            .expand(B, -1)
-            .unsqueeze(1)
-        )
 
         o, (h_n, c_n) = self.encoder(t)
-
-        result = self.decoder(sos, o, (h_n, c_n))
+        if is_train:
+            result = self.decoder(sample, o, (h_n, c_n))
 
 
 class Encoder(nn.Module):
@@ -172,13 +169,10 @@ class Encoder(nn.Module):
         t, (h_n, c_n) = self.lstm1(t, None)
         t, (h_n, c_n) = self.lstm2(t, None)
 
-
-
         t_max, t_max_index = seq_max_pool([t, mask])
 
         t_dim = list(t.size())[-1]
         o = seq_and_vec([t, t_max])
-
 
         o = o.permute(0, 2, 1)
         o = self.conv1(o)
@@ -191,10 +185,11 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size):
+    def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size, rel_num, gpu):
         super(Decoder, self).__init__()
 
         # self.embeds = nn.Embedding(word_dict_length, word_emb_size).cuda()
+        self.gpu = gpu
         self.fc1_dropout = nn.Sequential(
             nn.Dropout(0.25).cuda(),  # drop 20% of the neuron
         ).cuda()
@@ -209,14 +204,22 @@ class Decoder(nn.Module):
 
         self.use_attention = True
         self.attention = Attention(word_emb_size)
-    
+
+        self.sos = nn.Embedding(num_embeddings=1, embedding_dim=word_emb_size)
+        self.rel_emb = nn.Embedding(num_embeddings=rel_num, embedding_dim=word_emb_size)
+
+        self.rel = nn.Linear(word_emb_size, rel_num)
+        self.ent = nn.Linear(word_emb_size, 1)
+
+        self.t1 = self.to_rel
+        self.t2 = self.to_ent
+        self.t3 = self.to_ent
 
     def forward_step(self, input_var, hidden, encoder_outputs):
         batch_size = input_var.size(0)
         output_size = input_var.size(1)
         # embedded = self.embedding(input_var)
         # embedded = self.input_dropout(embedded)
-
 
         output, hidden = self.lstm1(input_var, hidden)
         # output, hidden = self.lstm2(output, hidden)
@@ -231,35 +234,75 @@ class Decoder(nn.Module):
         # print('ok!')
         # exit()
 
-        return output, attn
+        return output, attn, hidden
         # predicted_softmax = function(self.out(output.contiguous().view(-1, self.hidden_size)), dim=1).view(batch_size, output_size, -1)
         # return predicted_softmax, hidden, attn
 
-    def forward(self, input, o, h):
-        output, attn = self.forward_step(input, h, o)
+    def to_rel(self, input, h, encoder_o):
+        output, attn, h = self.forward_step(input, h, encoder_o)
+        output = self.rel(output)
+        return output, h, attn
+
+    def to_ent(self, input, h, encoder_o):
+        output, attn, h = self.forward_step(input, h, encoder_o)
+        # TODO cat encoder_o and output
+        output = self.ent(output)
+        return output, h, attn
+
+    def forward(self, sample, encoder_o, h):
+        # output, attn, h = self.forward_step(input, encoder_o, h)
+        # output -> rel
+        # rel + h + encoder_o -> ent, h
+        # ent + h + encoder_o -> ent, h
+        B = sample.T.size(0)
+        sos = (
+            self.sos(torch.tensor(0).cuda(self.gpu))
+            .unsqueeze(0)
+            .expand(B, -1)
+            .unsqueeze(1)
+        )
+        input = sos
+
+        t2_in = sample.R_in.cuda(self.gpu)
+        t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
+
+        output, h, attn = self.t1(input, h, encoder_o)
+        input = self.rel_emb(t2_in)
+        print(input.size()) # 64, 128
+        print("heiheihei")
+        exit()
+        output, h, attn = self.t2(input, h, encoder_o)
+        input = input
+        output, h, attn = self.t3(input, h, encoder_o)
+
+        # to_rel -> rel_to_ent -> ent_to_ent
+        # to_ent -> ent_to_rel -> rel_to_ent
+        # self.to_rel(output, None)
+        # self.to_ent(output, encoder_o)
+        # self.to_ent(output, encoder_o)
 
 
-class Rel2Ent(nn.Module):
+class ToEnt(nn.Module):
     def __init__(self):
-        super(Rel2Ent, self).__init__()
+        super(ToEnt, self).__init__()
         pass
 
     def forward(self, decoder):
         pass
 
 
-class Ent2Ent(nn.Module):
+# class Ent2Ent(nn.Module):
+#     def __init__(self):
+#         super(Ent2Ent, self).__init__()
+#         pass
+
+#     def forward(self, decoder):
+#         pass
+
+
+class ToRel(nn.Module):
     def __init__(self):
-        super(Ent2Ent, self).__init__()
-        pass
-
-    def forward(self, decoder):
-        pass
-
-
-class Ent2Rel(nn.Module):
-    def __init__(self):
-        super(Ent2Rel, self).__init__()
+        super(ToRel, self).__init__()
         pass
 
     def forward(self, decoder):
