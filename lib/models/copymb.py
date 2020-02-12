@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 from pytorch_memlab import profile
 
-from lib.tagger.crf import CRF
+from lib.layer.crf import CRF
 from lib.metrics import F1_triplet
 from lib.models.abc_model import ABCModel
 

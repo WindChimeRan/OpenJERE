@@ -13,7 +13,10 @@ from functools import partial
 from lib.metrics import F1_triplet
 from lib.models.abc_model import ABCModel
 
+from lib.layer import Attention
+
 activation = F.gelu
+
 
 def seq_max_pool(x):
     """seq是[None, seq_len, s_size]的格式，
@@ -82,6 +85,8 @@ class Seq2umt(ABCModel):
         self.decoder = Decoder(
             len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
         )
+        self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.hyper.emb_size)
+
 
     def masked_BCEloss(self, logits, gt, mask):
         loss = self.BCE(logits, gt)
@@ -95,15 +100,24 @@ class Seq2umt(ABCModel):
         )
 
     def run_metrics(self, output):
-        self.metrics(output["decode_result"], output["spo_gold"])    
+        self.metrics(output["decode_result"], output["spo_gold"])
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
         output = {}
 
         t = text_id = sample.T.cuda(self.gpu)
+        B = t.size(0)
+        sos = (
+            self.sos(torch.tensor(0).cuda(self.gpu))
+            .unsqueeze(0)
+            .expand(B, -1)
+            .unsqueeze(1)
+        )
 
-        h = self.encoder(t)
+        o, (h_n, c_n) = self.encoder(t)
+
+        result = self.decoder(sos, o, (h_n, c_n))
 
 
 class Encoder(nn.Module):
@@ -145,7 +159,6 @@ class Encoder(nn.Module):
         # self.comb = nn.Linear(word_emb_size * 2, word_emb_size)
 
     def forward(self, t):
-        # TODO
         mask = torch.gt(torch.unsqueeze(t, 2), 0).type(
             torch.cuda.FloatTensor
         )  # (batch_size,sent_len,1)
@@ -159,60 +172,72 @@ class Encoder(nn.Module):
         t, (h_n, c_n) = self.lstm1(t, None)
         t, (h_n, c_n) = self.lstm2(t, None)
 
-        # print(t.size()) # 64, 300, 128
-        # print(h_n.size()) # 2, 64, 64
-        # exit()
-        # h = torch.cat((h_n[0], h_n[1]), dim=-1) # 64, 128
+
 
         t_max, t_max_index = seq_max_pool([t, mask])
 
         t_dim = list(t.size())[-1]
         o = seq_and_vec([t, t_max])
 
-        # # print(h.size()) # 64, 300, 256
 
         o = o.permute(0, 2, 1)
-        # # print(h.size()) # 64, 256, 300
         o = self.conv1(o)
-        # # print(h.size()) # 64, 128, 300
 
         o = o.permute(0, 2, 1)
-        # print(h.size()) # 64, 300, 128
-        # exit()
-        # ps1 = self.fc_ps1(h)
-        # ps2 = self.fc_ps2(h)
 
-        # return [ps1, ps2, t, t_max, mask]
-        return o, h_n
+        h_n = torch.cat((h_n[0], h_n[1]), dim=-1).unsqueeze(0)
+        c_n = torch.cat((c_n[0], c_n[1]), dim=-1).unsqueeze(0)
+        return o, (h_n, c_n)
+
 
 class Decoder(nn.Module):
     def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size):
         super(Decoder, self).__init__()
 
-        self.embeds = nn.Embedding(word_dict_length, word_emb_size).cuda()
+        # self.embeds = nn.Embedding(word_dict_length, word_emb_size).cuda()
         self.fc1_dropout = nn.Sequential(
             nn.Dropout(0.25).cuda(),  # drop 20% of the neuron
         ).cuda()
 
         self.lstm1 = nn.LSTM(
             input_size=word_emb_size,
-            hidden_size=int(word_emb_size / 2),
+            hidden_size=word_emb_size,
             num_layers=1,
             batch_first=True,
-            bidirectional=True,
+            bidirectional=False,
         )
 
-        self.lstm2 = nn.LSTM(
-            input_size=word_emb_size,
-            hidden_size=int(word_emb_size / 2),
-            num_layers=1,
-            batch_first=True,
-            bidirectional=True,
-        )
+        self.use_attention = True
+        self.attention = Attention(word_emb_size)
+    
+
+    def forward_step(self, input_var, hidden, encoder_outputs):
+        batch_size = input_var.size(0)
+        output_size = input_var.size(1)
+        # embedded = self.embedding(input_var)
+        # embedded = self.input_dropout(embedded)
+
+
+        output, hidden = self.lstm1(input_var, hidden)
+        # output, hidden = self.lstm2(output, hidden)
+
+        attn = None
+        if self.use_attention:
+            output, attn = self.attention(output, encoder_outputs)
+        # output = output.contiguous().view(-1, self.word_emb_size)
+
+        # print(output.size()) # 64,1,128
+        # print(attn.size())  # 64,1,300
+        # print('ok!')
+        # exit()
+
+        return output, attn
+        # predicted_softmax = function(self.out(output.contiguous().view(-1, self.hidden_size)), dim=1).view(batch_size, output_size, -1)
+        # return predicted_softmax, hidden, attn
 
     def forward(self, input, o, h):
-        # https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
-        pass
+        output, attn = self.forward_step(input, h, o)
+
 
 class Rel2Ent(nn.Module):
     def __init__(self):
@@ -239,5 +264,3 @@ class Ent2Rel(nn.Module):
 
     def forward(self, decoder):
         pass
-
-
