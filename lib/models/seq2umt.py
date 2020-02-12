@@ -114,17 +114,17 @@ class Seq2umt(ABCModel):
 
         o, (h_n, c_n) = self.encoder(t)
         if is_train:
-            result = self.decoder(sample, o, (h_n, c_n))
+            t1_out, t2_out, t3_out = self.decoder(sample, o, (h_n, c_n))
 
 
 class Encoder(nn.Module):
     def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size):
         super(Encoder, self).__init__()
 
-        self.embeds = nn.Embedding(word_dict_length, word_emb_size).cuda()
+        self.embeds = nn.Embedding(word_dict_length, word_emb_size)
         self.fc1_dropout = nn.Sequential(
-            nn.Dropout(0.25).cuda(),  # drop 20% of the neuron
-        ).cuda()
+            nn.Dropout(0.25),  # drop 20% of the neuron
+        )
 
         self.lstm1 = nn.LSTM(
             input_size=word_emb_size,
@@ -160,7 +160,7 @@ class Encoder(nn.Module):
             torch.cuda.FloatTensor
         )  # (batch_size,sent_len,1)
         mask.requires_grad = False
-        t = self.embeds(t)
+        emb = t = self.embeds(t)
 
         t = self.fc1_dropout(t)
 
@@ -204,12 +204,22 @@ class Decoder(nn.Module):
 
         self.use_attention = True
         self.attention = Attention(word_emb_size)
-
+        self.conv1 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=word_emb_size * 2,  # 输入的深度
+                out_channels=word_emb_size,  # filter 的个数，输出的高度
+                kernel_size=3,  # filter的长与宽
+                stride=1,  # 每隔多少步跳一下
+                padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
+            ),
+            nn.ReLU(),
+        )
         self.sos = nn.Embedding(num_embeddings=1, embedding_dim=word_emb_size)
         self.rel_emb = nn.Embedding(num_embeddings=rel_num, embedding_dim=word_emb_size)
 
         self.rel = nn.Linear(word_emb_size, rel_num)
-        self.ent = nn.Linear(word_emb_size, 1)
+        self.ent1 = nn.Linear(word_emb_size, 1)
+        self.ent2 = nn.Linear(word_emb_size, 1)
 
         self.t1 = self.to_rel
         self.t2 = self.to_ent
@@ -245,8 +255,22 @@ class Decoder(nn.Module):
 
     def to_ent(self, input, h, encoder_o):
         output, attn, h = self.forward_step(input, h, encoder_o)
-        # TODO cat encoder_o and output
-        output = self.ent(output)
+        output = output.squeeze(1)
+        # print(encoder_o.size())
+        # print(output.size())
+
+        output = seq_and_vec([encoder_o, output])
+        # exit()
+
+        output = output.permute(0, 2, 1)
+        output = self.conv1(output)
+
+        output = output.permute(0, 2, 1)
+
+        ent1 = self.ent1(output)
+        ent2 = self.ent2(output)
+        output = ent1, ent2
+
         return output, h, attn
 
     def forward(self, sample, encoder_o, h):
@@ -264,46 +288,27 @@ class Decoder(nn.Module):
         input = sos
 
         t2_in = sample.R_in.cuda(self.gpu)
+
         t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
+        k1, k2 = t3_in
 
-        output, h, attn = self.t1(input, h, encoder_o)
+        t1_out, h, attn = self.t1(input, h, encoder_o)
         input = self.rel_emb(t2_in)
-        print(input.size()) # 64, 128
-        print("heiheihei")
-        exit()
-        output, h, attn = self.t2(input, h, encoder_o)
-        input = input
-        output, h, attn = self.t3(input, h, encoder_o)
+        input = input.unsqueeze(1)
 
-        # to_rel -> rel_to_ent -> ent_to_ent
-        # to_ent -> ent_to_rel -> rel_to_ent
-        # self.to_rel(output, None)
-        # self.to_ent(output, encoder_o)
-        # self.to_ent(output, encoder_o)
+        t2_out, h, attn = self.t2(input, h, encoder_o)
 
+        head1, head2 = t2_out
 
-class ToEnt(nn.Module):
-    def __init__(self):
-        super(ToEnt, self).__init__()
-        pass
+        print(encoder_o.size()) # 64, 300, 128
+        print(k1.size())
+        print(k1)
 
-    def forward(self, decoder):
-        pass
+        k1 = seq_gather([encoder_o, k1])
+        k2 = seq_gather([encoder_o, k2])
+        input = k1 + k2
+        input = input.unsqueeze(1)
+        t3_out, h, attn = self.t3(input, h, encoder_o)
 
+        return t1_out, t2_out, t3_out
 
-# class Ent2Ent(nn.Module):
-#     def __init__(self):
-#         super(Ent2Ent, self).__init__()
-#         pass
-
-#     def forward(self, decoder):
-#         pass
-
-
-class ToRel(nn.Module):
-    def __init__(self):
-        super(ToRel, self).__init__()
-        pass
-
-    def forward(self, decoder):
-        pass

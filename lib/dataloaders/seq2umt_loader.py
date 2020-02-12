@@ -92,8 +92,8 @@ class Seq2umt_Dataset(Abstract_dataset):
             self.R_gt.append(rel_gt)
 
             self.R_in.append(r)
-            self.K1_in.append(k1)
-            self.K2_in.append(k2)
+            self.K1_in.append([k1])
+            self.K2_in.append([k2])
 
         self.T = np.array(seq_padding(self.T))
 
