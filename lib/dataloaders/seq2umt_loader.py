@@ -135,10 +135,10 @@ class Batch_reader(object):
         self.T = torch.LongTensor(transposed_data[0])
         self.S1 = torch.FloatTensor(transposed_data[1])
         self.S2 = torch.FloatTensor(transposed_data[2])
-        self.O1 = torch.LongTensor(transposed_data[3])
-        self.O2 = torch.LongTensor(transposed_data[4])
+        self.O1 = torch.FloatTensor(transposed_data[3])
+        self.O2 = torch.FloatTensor(transposed_data[4])
 
-        self.R_gt = torch.LongTensor(transposed_data[5])
+        self.R_gt = torch.FloatTensor(transposed_data[5])
         self.R_in = torch.LongTensor(transposed_data[6])
 
         self.K1 = torch.LongTensor(transposed_data[7])

@@ -13,7 +13,8 @@ from functools import partial
 from lib.metrics import F1_triplet
 from lib.models.abc_model import ABCModel
 
-from lib.layer import Attention
+from lib.layer import Attention, MaskedBCE
+
 
 activation = F.gelu
 
@@ -76,6 +77,7 @@ class Seq2umt(ABCModel):
         )
         self.id2word = {v: k for k, v in self.word_vocab.items()}
         self.id2rel = {v: k for k, v in self.relation_vocab.items()}
+        self.mBCE = MaskedBCE()
         self.BCE = torch.nn.BCEWithLogitsLoss()
         self.metrics = F1_triplet()
         self.get_metric = self.metrics.get_metric
@@ -91,10 +93,10 @@ class Seq2umt(ABCModel):
         )
         self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.hyper.emb_size)
 
-    def masked_BCEloss(self, logits, gt, mask):
-        loss = self.BCE(logits, gt)
-        loss = torch.sum(loss.mul(mask)) / torch.sum(mask)
-        return loss
+    # def masked_BCEloss(self, logits, gt, mask):
+    #     loss = self.BCE(logits, gt)
+    #     loss = torch.sum(loss.mul(mask)) / torch.sum(mask)
+    #     return loss
 
     @staticmethod
     def description(epoch, epoch_num, output):
@@ -110,11 +112,34 @@ class Seq2umt(ABCModel):
         output = {}
 
         t = text_id = sample.T.cuda(self.gpu)
-        B = t.size(0)
+        mask = torch.gt(torch.unsqueeze(text_id, 2), 0).type(
+            torch.cuda.FloatTensor
+        )  # (batch_size,sent_len,1)
+        mask.requires_grad = False
+
+        t1_gt = sample.R_gt.cuda(self.gpu)
+
+        t2_gt1 = sample.S1.cuda(self.gpu)
+        t2_gt2 = sample.S2.cuda(self.gpu)
+
+        t3_gt1 = sample.O1.cuda(self.gpu)
+        t3_gt2 = sample.O2.cuda(self.gpu)
 
         o, (h_n, c_n) = self.encoder(t)
         if is_train:
-            t1_out, t2_out, t3_out = self.decoder(sample, o, (h_n, c_n))
+            t1_out, (t2_out1, t2_out2), (t3_out1, t3_out2) = self.decoder(
+                sample, o, (h_n, c_n)
+            )
+
+            t1_loss = self.BCE(t1_out, t1_gt)
+            t2_loss = self.mBCE(t2_out1, t2_gt1, mask) + self.mBCE(t2_out2, t2_gt2, mask)
+            t3_loss = self.mBCE(t3_out1, t3_gt1, mask) + self.mBCE(t3_out2, t3_gt2, mask)
+
+            loss_sum = t1_loss + t2_loss + t3_loss
+            output["loss"] = loss_sum
+
+        output["description"] = partial(self.description, output=output)
+        return output
 
 
 class Encoder(nn.Module):
@@ -122,9 +147,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.embeds = nn.Embedding(word_dict_length, word_emb_size)
-        self.fc1_dropout = nn.Sequential(
-            nn.Dropout(0.25),  # drop 20% of the neuron
-        )
+        self.fc1_dropout = nn.Sequential(nn.Dropout(0.25),)  # drop 20% of the neuron
 
         self.lstm1 = nn.LSTM(
             input_size=word_emb_size,
@@ -228,25 +251,14 @@ class Decoder(nn.Module):
     def forward_step(self, input_var, hidden, encoder_outputs):
         batch_size = input_var.size(0)
         output_size = input_var.size(1)
-        # embedded = self.embedding(input_var)
-        # embedded = self.input_dropout(embedded)
 
         output, hidden = self.lstm1(input_var, hidden)
-        # output, hidden = self.lstm2(output, hidden)
 
         attn = None
         if self.use_attention:
             output, attn = self.attention(output, encoder_outputs)
-        # output = output.contiguous().view(-1, self.word_emb_size)
-
-        # print(output.size()) # 64,1,128
-        # print(attn.size())  # 64,1,300
-        # print('ok!')
-        # exit()
 
         return output, attn, hidden
-        # predicted_softmax = function(self.out(output.contiguous().view(-1, self.hidden_size)), dim=1).view(batch_size, output_size, -1)
-        # return predicted_softmax, hidden, attn
 
     def to_rel(self, input, h, encoder_o):
         output, attn, h = self.forward_step(input, h, encoder_o)
@@ -256,11 +268,8 @@ class Decoder(nn.Module):
     def to_ent(self, input, h, encoder_o):
         output, attn, h = self.forward_step(input, h, encoder_o)
         output = output.squeeze(1)
-        # print(encoder_o.size())
-        # print(output.size())
 
         output = seq_and_vec([encoder_o, output])
-        # exit()
 
         output = output.permute(0, 2, 1)
         output = self.conv1(output)
@@ -273,11 +282,8 @@ class Decoder(nn.Module):
 
         return output, h, attn
 
-    def forward(self, sample, encoder_o, h):
-        # output, attn, h = self.forward_step(input, encoder_o, h)
-        # output -> rel
-        # rel + h + encoder_o -> ent, h
-        # ent + h + encoder_o -> ent, h
+    def train_forward(self, sample, encoder_o, h):
+
         B = sample.T.size(0)
         sos = (
             self.sos(torch.tensor(0).cuda(self.gpu))
@@ -293,16 +299,13 @@ class Decoder(nn.Module):
         k1, k2 = t3_in
 
         t1_out, h, attn = self.t1(input, h, encoder_o)
+        t1_out = t1_out.squeeze(1)
         input = self.rel_emb(t2_in)
         input = input.unsqueeze(1)
 
         t2_out, h, attn = self.t2(input, h, encoder_o)
 
         head1, head2 = t2_out
-
-        print(encoder_o.size()) # 64, 300, 128
-        print(k1.size())
-        print(k1)
 
         k1 = seq_gather([encoder_o, k1])
         k2 = seq_gather([encoder_o, k2])
@@ -312,3 +315,9 @@ class Decoder(nn.Module):
 
         return t1_out, t2_out, t3_out
 
+    def test_forward(self, sample, encoder_o, h):
+        raise NotImplementedError("inference")
+
+    def forward(self, sample, encoder_o, h):
+        t1_out, t2_out, t3_out = self.train_forward(sample, encoder_o, h)
+        return t1_out, t2_out, t3_out
