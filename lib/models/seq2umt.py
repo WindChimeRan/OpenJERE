@@ -276,8 +276,8 @@ class Decoder(nn.Module):
 
         output = output.permute(0, 2, 1)
 
-        ent1 = self.ent1(output)
-        ent2 = self.ent2(output)
+        ent1 = self.ent1(output).squeeze(2)
+        ent2 = self.ent2(output).squeeze(2)
         output = ent1, ent2
 
         return output, h, attn
