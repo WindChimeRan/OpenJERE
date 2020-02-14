@@ -87,7 +87,6 @@ class Seq2umt(ABCModel):
         self.decoder = Decoder(
             len(self.word_vocab),
             self.hyper.emb_size,
-            self.hyper.hidden_size,
             len(self.relation_vocab),
             self.gpu,
         )
@@ -128,15 +127,23 @@ class Seq2umt(ABCModel):
         o, (h_n, c_n) = self.encoder(t)
         if is_train:
             t1_out, (t2_out1, t2_out2), (t3_out1, t3_out2) = self.decoder(
-                sample, o, (h_n, c_n)
+                sample, o, (h_n, c_n), is_train
             )
 
             t1_loss = self.BCE(t1_out, t1_gt)
-            t2_loss = self.mBCE(t2_out1, t2_gt1, mask) + self.mBCE(t2_out2, t2_gt2, mask)
-            t3_loss = self.mBCE(t3_out1, t3_gt1, mask) + self.mBCE(t3_out2, t3_gt2, mask)
+            t2_loss = self.mBCE(t2_out1, t2_gt1, mask) + self.mBCE(
+                t2_out2, t2_gt2, mask
+            )
+            t3_loss = self.mBCE(t3_out1, t3_gt1, mask) + self.mBCE(
+                t3_out2, t3_gt2, mask
+            )
 
             loss_sum = t1_loss + t2_loss + t3_loss
             output["loss"] = loss_sum
+        else:
+            # print('infer')
+            output["decode_result"] = self.decoder(sample, o, (h_n, c_n), is_train)
+            output["spo_gold"] = sample.spo_gold
 
         output["description"] = partial(self.description, output=output)
         return output
@@ -208,7 +215,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, word_dict_length, word_emb_size, lstm_hidden_size, rel_num, gpu):
+    def __init__(self, word_dict_length, word_emb_size, rel_num, gpu):
         super(Decoder, self).__init__()
 
         # self.embeds = nn.Embedding(word_dict_length, word_emb_size).cuda()
@@ -244,9 +251,9 @@ class Decoder(nn.Module):
         self.ent1 = nn.Linear(word_emb_size, 1)
         self.ent2 = nn.Linear(word_emb_size, 1)
 
-        self.t1 = self.to_rel
-        self.t2 = self.to_ent
-        self.t3 = self.to_ent
+        self.t1_op = self.to_rel
+        self.t2_op = self.to_ent
+        self.t3_op = self.to_ent
 
     def forward_step(self, input_var, hidden, encoder_outputs):
         batch_size = input_var.size(0)
@@ -282,8 +289,7 @@ class Decoder(nn.Module):
 
         return output, h, attn
 
-    def train_forward(self, sample, encoder_o, h):
-
+    def t1(self, sample, encoder_o, h):
         B = sample.T.size(0)
         sos = (
             self.sos(torch.tensor(0).cuda(self.gpu))
@@ -291,33 +297,103 @@ class Decoder(nn.Module):
             .expand(B, -1)
             .unsqueeze(1)
         )
+
         input = sos
-
-        t2_in = sample.R_in.cuda(self.gpu)
-
-        t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
-        k1, k2 = t3_in
-
-        t1_out, h, attn = self.t1(input, h, encoder_o)
+        t1_out, h, attn = self.t1_op(input, h, encoder_o)
         t1_out = t1_out.squeeze(1)
+
+        return t1_out, h
+
+    def t2(self, sample, encoder_o, h):
+        t2_in = sample.R_in.cuda(self.gpu)
         input = self.rel_emb(t2_in)
         input = input.unsqueeze(1)
+        t2_out, h, attn = self.t2_op(input, h, encoder_o)
+        return t2_out, h
 
-        t2_out, h, attn = self.t2(input, h, encoder_o)
-
-        head1, head2 = t2_out
-
+    def t3(self, sample, encoder_o, h):
+        t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
+        k1, k2 = t3_in
         k1 = seq_gather([encoder_o, k1])
         k2 = seq_gather([encoder_o, k2])
         input = k1 + k2
         input = input.unsqueeze(1)
-        t3_out, h, attn = self.t3(input, h, encoder_o)
+        t3_out, h, attn = self.t3_op(input, h, encoder_o)
+        return t3_out, h
+
+    def train_forward(self, sample, encoder_o, h):
+
+        t1_out, h = self.t1(sample, encoder_o, h)
+        t2_out, h = self.t2(sample, encoder_o, h)
+        t3_out, h = self.t3(sample, encoder_o, h)
 
         return t1_out, t2_out, t3_out
 
-    def test_forward(self, sample, encoder_o, h):
-        raise NotImplementedError("inference")
+    def test_forward(self, sample, encoder_o, h) -> List[List[Dict[str, str]]]:
+        text_id = sample.T.cuda(self.gpu)
+        text = text_id.tolist()
+        text = [[self.id2word[c] for c in sent] for sent in text]
+        result = []
+        for i, sent in enumerate(text):
+            triplets = self.extract_items(
+                sent, text_id[i, :].unsqueeze(0).contiguous(), encoder_o, h
+            )
+            result.append(triplets)
+        return result
 
-    def forward(self, sample, encoder_o, h):
-        t1_out, t2_out, t3_out = self.train_forward(sample, encoder_o, h)
-        return t1_out, t2_out, t3_out
+    def extract_items(self, sent, text_id, encoder_o, h) -> List[Dict[str, str]]:
+        R = []
+        # _k1, _k2, t, t_max, mask = self.S(text_id)
+        B = text_id.size(0)
+        sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).unsqueeze(1)
+
+        # t1
+        input = sos
+        t1_out, h, attn = self.t1_op(input, h, encoder_o)
+        t1_out = t1_out.squeeze(1)
+
+        # _k1, _k2 = _k1[0, :, 0], _k2[0, :, 0]
+        # _kk1s = []
+        # for i, _kk1 in enumerate(_k1):
+        #     if _kk1 > 0.5:
+        #         _subject = ""
+        #         for j, _kk2 in enumerate(_k2[i:]):
+        #             if _kk2 > 0.5:
+        #                 _subject = self.hyper.join(sent[i : i + j + 1])
+        #                 break
+        #         if _subject:
+        #             _k1, _k2 = (
+        #                 torch.LongTensor([[i]]),
+        #                 torch.LongTensor([[i + j]]),
+        #             )  # np.array([i]), np.array([i+j])
+        #             _o1, _o2 = self.PO(t.cuda(), t_max.cuda(), _k1.cuda(), _k2.cuda())
+        #             _o1, _o2 = _o1.cpu().data.numpy(), _o2.cpu().data.numpy()
+
+        #             _o1, _o2 = np.argmax(_o1[0], 1), np.argmax(_o2[0], 1)
+
+        #             for i, _oo1 in enumerate(_o1):
+        #                 if _oo1 > 0:
+        #                     for j, _oo2 in enumerate(_o2[i:]):
+        #                         if _oo2 == _oo1:
+        #                             _object = self.hyper.join(sent[i : i + j + 1])
+        #                             _predicate = self.id2rel[_oo1]
+        #                             R.append(
+        #                                 {
+        #                                     "subject": _subject,
+        #                                     "predicate": _predicate,
+        #                                     "object": _object,
+        #                                 }
+        #                             )
+        #                             break
+        #     _kk1s.append(_kk1.data.cpu().numpy())
+        # _kk1s = np.array(_kk1s)
+        return R
+
+    def forward(self, sample, encoder_o, h, is_train):
+        if is_train:
+            t1_out, t2_out, t3_out = self.train_forward(sample, encoder_o, h)
+            return t1_out, t2_out, t3_out
+        else:
+            # print("emmm")
+            decode_result = self.test_forward(sample, encoder_o, h)
+            return decode_result

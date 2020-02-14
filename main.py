@@ -282,8 +282,8 @@ class Runner(object):
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
 
             self.save_model(epoch)
-            if epoch % self.hyper.print_epoch == 0 and epoch > 2:
-                self.evaluation(dev_loader)
+            # if epoch % self.hyper.print_epoch == 0 and epoch > 2:
+            #     self.evaluation(dev_loader)
 
 
 if __name__ == "__main__":

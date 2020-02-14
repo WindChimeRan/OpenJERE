@@ -17,6 +17,7 @@
     "bio_emb_size": 50,
     "hidden_size": 64,
     "threshold": 0.5,
+    "order": ["rel", "head", "tail"],
     "activation": "tanh",
     "optimizer": "adam",
     "epoch_num":100,
