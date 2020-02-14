@@ -72,11 +72,11 @@ class Seq2umt(ABCModel):
         self.word_vocab = json.load(
             open(os.path.join(self.data_root, "word_vocab.json"), "r")
         )
-        self.relation_vocab = json.load(
-            open(os.path.join(self.data_root, "relation_vocab.json"), "r")
-        )
-        self.id2word = {v: k for k, v in self.word_vocab.items()}
-        self.id2rel = {v: k for k, v in self.relation_vocab.items()}
+        # self.relation_vocab = json.load(
+        #     open(os.path.join(self.data_root, "relation_vocab.json"), "r")
+        # )
+        # self.id2word = {v: k for k, v in self.word_vocab.items()}
+        # self.id2rel = {v: k for k, v in self.relation_vocab.items()}
         self.mBCE = MaskedBCE()
         self.BCE = torch.nn.BCEWithLogitsLoss()
         self.metrics = F1_triplet()
@@ -84,12 +84,7 @@ class Seq2umt(ABCModel):
         self.encoder = Encoder(
             len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
         )
-        self.decoder = Decoder(
-            len(self.word_vocab),
-            self.hyper.emb_size,
-            len(self.relation_vocab),
-            self.gpu,
-        )
+        self.decoder = Decoder(hyper)
         self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.hyper.emb_size)
 
     # def masked_BCEloss(self, logits, gt, mask):
@@ -124,11 +119,11 @@ class Seq2umt(ABCModel):
         t3_gt1 = sample.O1.cuda(self.gpu)
         t3_gt2 = sample.O2.cuda(self.gpu)
 
-        o, (h_n, c_n) = self.encoder(t)
+        o, h = self.encoder(t)
         if is_train:
-            t1_out, (t2_out1, t2_out2), (t3_out1, t3_out2) = self.decoder(
-                sample, o, (h_n, c_n), is_train
-            )
+
+            t1_out, t2_out, t3_out = self.decoder.train_forward(sample, o, h)
+            (t2_out1, t2_out2), (t3_out1, t3_out2) = t2_out, t3_out
 
             t1_loss = self.BCE(t1_out, t1_gt)
             t2_loss = self.mBCE(t2_out1, t2_gt1, mask) + self.mBCE(
@@ -141,10 +136,10 @@ class Seq2umt(ABCModel):
             loss_sum = t1_loss + t2_loss + t3_loss
             output["loss"] = loss_sum
         else:
-            # print('infer')
-            output["decode_result"] = self.decoder(sample, o, (h_n, c_n), is_train)
+            print("infer")
+            output["decode_result"] = self.decoder.test_forward(sample, o, h)
             output["spo_gold"] = sample.spo_gold
-
+            exit()
         output["description"] = partial(self.description, output=output)
         return output
 
@@ -215,49 +210,60 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, word_dict_length, word_emb_size, rel_num, gpu):
+    def __init__(self, hyper):
         super(Decoder, self).__init__()
+        self.hyper = hyper
+        self.data_root = hyper.data_root
+        self.gpu = hyper.gpu
+        self.word_emb_size = self.hyper.emb_size
+        self.word_vocab = json.load(
+            open(os.path.join(self.data_root, "word_vocab.json"), "r")
+        )
+        self.relation_vocab = json.load(
+            open(os.path.join(self.data_root, "relation_vocab.json"), "r")
+        )
+        self.rel_num = len(self.relation_vocab)
+        self.id2word = {v: k for k, v in self.word_vocab.items()}
+        self.id2rel = {v: k for k, v in self.relation_vocab.items()}
 
-        # self.embeds = nn.Embedding(word_dict_length, word_emb_size).cuda()
-        self.gpu = gpu
         self.fc1_dropout = nn.Sequential(
             nn.Dropout(0.25).cuda(),  # drop 20% of the neuron
         ).cuda()
 
         self.lstm1 = nn.LSTM(
-            input_size=word_emb_size,
-            hidden_size=word_emb_size,
+            input_size=self.word_emb_size,
+            hidden_size=self.word_emb_size,
             num_layers=1,
             batch_first=True,
             bidirectional=False,
         )
 
         self.use_attention = True
-        self.attention = Attention(word_emb_size)
+        self.attention = Attention(self.word_emb_size)
         self.conv1 = nn.Sequential(
             nn.Conv1d(
-                in_channels=word_emb_size * 2,  # 输入的深度
-                out_channels=word_emb_size,  # filter 的个数，输出的高度
+                in_channels=self.word_emb_size * 2,  # 输入的深度
+                out_channels=self.word_emb_size,  # filter 的个数，输出的高度
                 kernel_size=3,  # filter的长与宽
                 stride=1,  # 每隔多少步跳一下
                 padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
             ),
             nn.ReLU(),
         )
-        self.sos = nn.Embedding(num_embeddings=1, embedding_dim=word_emb_size)
-        self.rel_emb = nn.Embedding(num_embeddings=rel_num, embedding_dim=word_emb_size)
+        self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.word_emb_size)
+        self.rel_emb = nn.Embedding(
+            num_embeddings=self.rel_num, embedding_dim=self.word_emb_size
+        )
 
-        self.rel = nn.Linear(word_emb_size, rel_num)
-        self.ent1 = nn.Linear(word_emb_size, 1)
-        self.ent2 = nn.Linear(word_emb_size, 1)
+        self.rel = nn.Linear(self.word_emb_size, self.rel_num)
+        self.ent1 = nn.Linear(self.word_emb_size, 1)
+        self.ent2 = nn.Linear(self.word_emb_size, 1)
 
         self.t1_op = self.to_rel
         self.t2_op = self.to_ent
         self.t3_op = self.to_ent
 
     def forward_step(self, input_var, hidden, encoder_outputs):
-        batch_size = input_var.size(0)
-        output_size = input_var.size(1)
 
         output, hidden = self.lstm1(input_var, hidden)
 
@@ -289,14 +295,7 @@ class Decoder(nn.Module):
 
         return output, h, attn
 
-    def t1(self, sample, encoder_o, h):
-        B = sample.T.size(0)
-        sos = (
-            self.sos(torch.tensor(0).cuda(self.gpu))
-            .unsqueeze(0)
-            .expand(B, -1)
-            .unsqueeze(1)
-        )
+    def t1(self, sos, encoder_o, h):
 
         input = sos
         t1_out, h, attn = self.t1_op(input, h, encoder_o)
@@ -304,15 +303,13 @@ class Decoder(nn.Module):
 
         return t1_out, h
 
-    def t2(self, sample, encoder_o, h):
-        t2_in = sample.R_in.cuda(self.gpu)
+    def t2(self, t2_in, encoder_o, h):
         input = self.rel_emb(t2_in)
         input = input.unsqueeze(1)
         t2_out, h, attn = self.t2_op(input, h, encoder_o)
         return t2_out, h
 
-    def t3(self, sample, encoder_o, h):
-        t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
+    def t3(self, t3_in, encoder_o, h):
         k1, k2 = t3_in
         k1 = seq_gather([encoder_o, k1])
         k2 = seq_gather([encoder_o, k2])
@@ -322,10 +319,19 @@ class Decoder(nn.Module):
         return t3_out, h
 
     def train_forward(self, sample, encoder_o, h):
-
-        t1_out, h = self.t1(sample, encoder_o, h)
-        t2_out, h = self.t2(sample, encoder_o, h)
-        t3_out, h = self.t3(sample, encoder_o, h)
+        B = sample.T.size(0)
+        sos = (
+            self.sos(torch.tensor(0).cuda(self.gpu))
+            .unsqueeze(0)
+            .expand(B, -1)
+            .unsqueeze(1)
+        )
+        t1_in = sos
+        t2_in = sample.R_in.cuda(self.gpu)
+        t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
+        t1_out, h = self.t1(t1_in, encoder_o, h)
+        t2_out, h = self.t2(t2_in, encoder_o, h)
+        t3_out, h = self.t3(t3_in, encoder_o, h)
 
         return t1_out, t2_out, t3_out
 
@@ -335,22 +341,45 @@ class Decoder(nn.Module):
         text = [[self.id2word[c] for c in sent] for sent in text]
         result = []
         for i, sent in enumerate(text):
+            h, c = (
+                h[0][:, i, :].unsqueeze(1).contiguous(),
+                h[1][:, i, :].unsqueeze(1).contiguous(),
+            )
             triplets = self.extract_items(
-                sent, text_id[i, :].unsqueeze(0).contiguous(), encoder_o, h
+                sample,
+                sent,
+                text_id[i, :].unsqueeze(0).contiguous(),
+                encoder_o[i, :, :].unsqueeze(0).contiguous(),
+                (h, c),
             )
             result.append(triplets)
         return result
 
-    def extract_items(self, sent, text_id, encoder_o, h) -> List[Dict[str, str]]:
+    def extract_items(self, sample, sent, text_id, encoder_o, h) -> List[Dict[str, str]]:
         R = []
-        # _k1, _k2, t, t_max, mask = self.S(text_id)
-        B = text_id.size(0)
-        sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).unsqueeze(1)
 
+        sos = (
+            self.sos(torch.tensor(0).cuda(self.gpu))
+            .unsqueeze(0)
+            .unsqueeze(1)
+        )
+        t1_out, h = self.t1(sos, encoder_o, h)
+        print(t1_out.size())
+        print(t1_out)
+
+                
+        # TODO bug: _k1, _k2 = sigmoid(_k1, _k2)
+        ## TODO: not a bug. use 0 instead of 0.5
+        rels = t1_out.squeeze().tolist()
+        rels_id = [i for i, r in enumerate(rels) if r > 0]
+        rels_name = [self.id2rel[i] for i, r in enumerate(rels) if r > 0]
+        print(rels_id)
+        print(rels_name)
+        exit()
         # t1
-        input = sos
-        t1_out, h, attn = self.t1_op(input, h, encoder_o)
-        t1_out = t1_out.squeeze(1)
+        # input = sos
+        # t1_out, h, attn = self.t1_op(input, h, encoder_o)
+        # t1_out = t1_out.squeeze(1)
 
         # _k1, _k2 = _k1[0, :, 0], _k2[0, :, 0]
         # _kk1s = []
