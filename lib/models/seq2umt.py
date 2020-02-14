@@ -296,7 +296,7 @@ class Decoder(nn.Module):
         return output, h, attn
 
     def t1(self, sos, encoder_o, h):
-
+        # sos - rel
         input = sos
         t1_out, h, attn = self.t1_op(input, h, encoder_o)
         t1_out = t1_out.squeeze(1)
@@ -304,12 +304,14 @@ class Decoder(nn.Module):
         return t1_out, h
 
     def t2(self, t2_in, encoder_o, h):
+        # rel - head
         input = self.rel_emb(t2_in)
         input = input.unsqueeze(1)
         t2_out, h, attn = self.t2_op(input, h, encoder_o)
         return t2_out, h
 
     def t3(self, t3_in, encoder_o, h):
+        # head - tail
         k1, k2 = t3_in
         k1 = seq_gather([encoder_o, k1])
         k2 = seq_gather([encoder_o, k2])
@@ -375,7 +377,13 @@ class Decoder(nn.Module):
         rels_name = [self.id2rel[i] for i, r in enumerate(rels) if r > 0]
         print(rels_id)
         print(rels_name)
-        exit()
+        # exit()
+        for r in rels_id:
+            t2_in = r.cuda(self.gpu)
+            t2_out, h = self.t2(t2_in, encoder_o, h)
+            # TODO
+
+
         # t1
         # input = sos
         # t1_out, h, attn = self.t1_op(input, h, encoder_o)
