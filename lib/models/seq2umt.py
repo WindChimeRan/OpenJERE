@@ -378,11 +378,6 @@ class Decoder(nn.Module):
 
         sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).unsqueeze(1)
         t1_out, h = self.t1(sos, encoder_o, h)
-        # print(t1_out.size())
-        # print(t1_out)
-
-        # TODO bug: _k1, _k2 = sigmoid(_k1, _k2)
-        ## TODO: not a bug. use 0 instead of 0.5
 
         # t1
         rels = t1_out.squeeze().tolist()
@@ -397,8 +392,6 @@ class Decoder(nn.Module):
             _subject_id, _subject_name = self.pos_2_entity(sent, t2_out)
 
             if len(_subject_name) > 0:
-                _object_name = []
-                _object_id = []
                 for (s1, s2), s_name in zip(_subject_id, _subject_name):
                     t3_in = (
                         torch.LongTensor([[s1]]).cuda(self.gpu),
@@ -406,13 +399,11 @@ class Decoder(nn.Module):
                     )
                     t3_out, h = self.t3(t3_in, encoder_o, h)
                     _object_id, _object_name = self.pos_2_entity(sent, t3_out)
-                    # print(_object_name)
 
                     for o_name in _object_name:
                         R.append(
                             {"subject": s_name, "predicate": r_name, "object": o_name,}
                         )
-
         return R
 
     def forward(self, sample, encoder_o, h, is_train):
