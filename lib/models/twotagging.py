@@ -106,7 +106,6 @@ class Twotagging(ABCModel):
         R = []
         _k1, _k2, t, t_max, mask = self.S(text_id)
 
-
         _k1, _k2 = _k1[0, :, 0], _k2[0, :, 0]
 
         _kk1s = []
