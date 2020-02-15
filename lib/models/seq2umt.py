@@ -99,7 +99,13 @@ class Seq2umt(ABCModel):
         )
 
     def run_metrics(self, output):
+        # whole triplet 
         self.metrics(output["decode_result"], output["spo_gold"])
+        ## rel only
+        # self.metrics(output["decode_result"], output["spo_gold"], get_seq=lambda dic: (dic["predicate"],))
+
+        ## rel + head
+        # self.metrics(output["decode_result"], output["spo_gold"], get_seq=lambda dic: (dic["predicate"], dic["subject"]))
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
@@ -136,7 +142,10 @@ class Seq2umt(ABCModel):
             loss_sum = t1_loss + t2_loss + t3_loss
             output["loss"] = loss_sum
         else:
-            output["decode_result"] = self.decoder.test_forward(sample, o, h)
+            result, result_t1, result_t2 = self.decoder.test_forward(sample, o, h)
+            output["decode_result"] = result
+            output["decode_t1"] = result_t1
+            output["decode_t2"] = result_t2
             output["spo_gold"] = sample.spo_gold
         output["description"] = partial(self.description, output=output)
         return output
@@ -313,6 +322,10 @@ class Decoder(nn.Module):
         k1, k2 = t3_in
         k1 = seq_gather([encoder_o, k1])
         k2 = seq_gather([encoder_o, k2])
+
+        # TODO
+        # print(k1.size())
+        # k = torch.cat([k1,k2],1)
         input = k1 + k2
         input = input.unsqueeze(1)
         t3_out, h, attn = self.t3_op(input, h, encoder_o)
@@ -340,13 +353,16 @@ class Decoder(nn.Module):
         text = text_id.tolist()
         text = [[self.id2word[c] for c in sent] for sent in text]
         result = []
+        result_t1 = []
+        result_t2 = []
         for i, sent in enumerate(text):
 
             h, c = (
                 decoder_h[0][:, i, :].unsqueeze(1).contiguous(),
                 decoder_h[1][:, i, :].unsqueeze(1).contiguous(),
             )
-            triplets = self.extract_items(
+            # TODO
+            triplets, R_t1, R_t2 = self.extract_items(
                 sample,
                 sent,
                 text_id[i, :].unsqueeze(0).contiguous(),
@@ -354,9 +370,11 @@ class Decoder(nn.Module):
                 (h, c),
             )
             result.append(triplets)
-        return result
+            result_t1.append(R_t1)
+            result_t2.append(R_t2)
+        return result, result_t1, result_t2
 
-    def pos_2_entity(self, sent, t2_out):
+    def _pos_2_entity(self, sent, t2_out):
         # extract t2 result from outs
         t2_out1, t2_out2 = t2_out
         _subject_name = []
@@ -375,6 +393,8 @@ class Decoder(nn.Module):
     ) -> List[Dict[str, str]]:
 
         R = []
+        R_t1 = []
+        R_t2 = []
 
         sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).unsqueeze(1)
         t1_out, h = self.t1(sos, encoder_o, h)
@@ -389,7 +409,9 @@ class Decoder(nn.Module):
             t2_in = torch.LongTensor([r_id]).cuda(self.gpu)
             t2_out, h = self.t2(t2_in, encoder_o, h)
 
-            _subject_id, _subject_name = self.pos_2_entity(sent, t2_out)
+            _subject_id, _subject_name = self._pos_2_entity(sent, t2_out)
+
+            R_t1.append({"predicate": r_name})
 
             if len(_subject_name) > 0:
                 for (s1, s2), s_name in zip(_subject_id, _subject_name):
@@ -398,13 +420,14 @@ class Decoder(nn.Module):
                         torch.LongTensor([[s2]]).cuda(self.gpu),
                     )
                     t3_out, h = self.t3(t3_in, encoder_o, h)
-                    _object_id, _object_name = self.pos_2_entity(sent, t3_out)
+                    _object_id, _object_name = self._pos_2_entity(sent, t3_out)
 
+                    R_t2.append({"subject": s_name, "predicate": r_name})
                     for o_name in _object_name:
                         R.append(
                             {"subject": s_name, "predicate": r_name, "object": o_name,}
                         )
-        return R
+        return R, R_t1, R_t2
 
     def forward(self, sample, encoder_o, h, is_train):
         pass
