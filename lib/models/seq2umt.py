@@ -143,6 +143,7 @@ class Seq2umt(ABCModel):
             loss_sum = t1_loss + t2_loss + t3_loss
             output["loss"] = loss_sum
         else:
+            # TODO
             result, result_t1, result_t2 = self.decoder.test_forward(sample, o, h)
             output["decode_result"] = result
             output["decode_t1"] = result_t1
@@ -248,16 +249,20 @@ class Decoder(nn.Module):
 
         self.use_attention = True
         self.attention = Attention(self.word_emb_size)
-        self.conv1 = nn.Sequential(
-            nn.Conv1d(
+        self.conv2_to_1_rel = nn.Conv1d(
                 in_channels=self.word_emb_size * 2,  # 输入的深度
                 out_channels=self.word_emb_size,  # filter 的个数，输出的高度
                 kernel_size=3,  # filter的长与宽
                 stride=1,  # 每隔多少步跳一下
                 padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
-            ),
-            nn.ReLU(),
-        )
+            )
+        self.conv2_to_1_ent = nn.Conv1d(
+                in_channels=self.word_emb_size * 2,  # 输入的深度
+                out_channels=self.word_emb_size,  # filter 的个数，输出的高度
+                kernel_size=3,  # filter的长与宽
+                stride=1,  # 每隔多少步跳一下
+                padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
+            )
         self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.word_emb_size)
         self.rel_emb = nn.Embedding(
             num_embeddings=self.rel_num, embedding_dim=self.word_emb_size
@@ -266,6 +271,7 @@ class Decoder(nn.Module):
         self.rel = nn.Linear(self.word_emb_size, self.rel_num)
         self.ent1 = nn.Linear(self.word_emb_size, 1)
         self.ent2 = nn.Linear(self.word_emb_size, 1)
+        # self.rel_tag = nn.Linear(self.word_emb_size * 2, self.rel_num)
 
         self.t1_op = self.to_rel
         self.t2_op = self.to_ent
@@ -281,44 +287,54 @@ class Decoder(nn.Module):
 
         return output, attn, hidden
 
-    def to_rel(self, input, h, encoder_o):
+    def to_rel(self, input, h, encoder_o, mask):
         output, attn, h = self.forward_step(input, h, encoder_o)
-        output = self.rel(output)
-        return output, h, attn
+        ew_encoder_o = seq_and_vec([encoder_o, output.squeeze(1)])
+        new_encoder_o = new_encoder_o.permute(0, 2, 1)
+        new_encoder_o = self.conv2_to_1_rel(new_encoder_o)
+        new_encoder_o = new_encoder_o.permute(0, 2, 1)
 
-    def to_ent(self, input, h, encoder_o):
+        output = activation(new_encoder_o)
+        output = self.rel(output)
+        output, _ = seq_max_pool([output, mask])
+
+        return output, h, new_encoder_o, attn
+
+    def to_ent(self, input, h, encoder_o, mask):
         output, attn, h = self.forward_step(input, h, encoder_o)
         output = output.squeeze(1)
 
-        output = seq_and_vec([encoder_o, output])
+        new_encoder_o = seq_and_vec([encoder_o, output])
 
-        output = output.permute(0, 2, 1)
-        output = self.conv1(output)
+        new_encoder_o = new_encoder_o.permute(0, 2, 1)
+        new_encoder_o = self.conv2_to_1_ent(new_encoder_o)
 
-        output = output.permute(0, 2, 1)
+        new_encoder_o = new_encoder_o.permute(0, 2, 1)
 
+        output = activation(new_encoder_o)
         ent1 = self.ent1(output).squeeze(2)
         ent2 = self.ent2(output).squeeze(2)
+
         output = ent1, ent2
 
-        return output, h, attn
+        return output, h, new_encoder_o, attn
 
-    def t1(self, sos, encoder_o, h):
+    def t1(self, sos, encoder_o, h, mask):
         # sos - rel
         input = sos
-        t1_out, h, attn = self.t1_op(input, h, encoder_o)
+        t1_out, h, new_encoder_o, attn = self.t1_op(input, h, encoder_o, mask)
         t1_out = t1_out.squeeze(1)
 
-        return t1_out, h
+        return t1_out, h, new_encoder_o
 
-    def t2(self, t2_in, encoder_o, h):
+    def t2(self, t2_in, encoder_o, h, mask):
         # rel - head
         input = self.rel_emb(t2_in)
         input = input.unsqueeze(1)
-        t2_out, h, attn = self.t2_op(input, h, encoder_o)
-        return t2_out, h
+        t2_out, h, new_encoder_o, attn = self.t2_op(input, h, encoder_o, mask)
+        return t2_out, h, new_encoder_o
 
-    def t3(self, t3_in, encoder_o, h):
+    def t3(self, t3_in, encoder_o, h, mask):
         # head - tail
         k1, k2 = t3_in
         k1 = seq_gather([encoder_o, k1])
@@ -329,8 +345,8 @@ class Decoder(nn.Module):
         # k = torch.cat([k1,k2],1)
         input = k1 + k2
         input = input.unsqueeze(1)
-        t3_out, h, attn = self.t3_op(input, h, encoder_o)
-        return t3_out, h
+        t3_out, h, new_encoder_o, attn = self.t3_op(input, h, encoder_o, mask)
+        return t3_out, h, new_encoder_o
 
     def train_forward(self, sample, encoder_o, h):
         B = sample.T.size(0)
@@ -343,14 +359,24 @@ class Decoder(nn.Module):
         t1_in = sos
         t2_in = sample.R_in.cuda(self.gpu)
         t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
-        t1_out, h = self.t1(t1_in, encoder_o, h)
-        t2_out, h = self.t2(t2_in, encoder_o, h)
-        t3_out, h = self.t3(t3_in, encoder_o, h)
+        t = text_id = sample.T.cuda(self.gpu)
+        mask = torch.gt(torch.unsqueeze(text_id, 2), 0).type(
+            torch.cuda.FloatTensor
+        )  # (batch_size,sent_len,1)
+        mask.requires_grad = False
+        # only using encoder_o
+        t1_out, h, new_encoder_o = self.t1(t1_in, encoder_o, h, mask)
+        t2_out, h, new_encoder_o = self.t2(t2_in, new_encoder_o, h, mask)
+        t3_out, h, new_encoder_o = self.t3(t3_in, new_encoder_o, h, mask)
 
         return t1_out, t2_out, t3_out
 
     def test_forward(self, sample, encoder_o, decoder_h) -> List[List[Dict[str, str]]]:
         text_id = sample.T.cuda(self.gpu)
+        mask = torch.gt(torch.unsqueeze(text_id, 2), 0).type(
+            torch.cuda.FloatTensor
+        )  # (batch_size,sent_len,1)
+        mask.requires_grad = False
         text = text_id.tolist()
         text = [[self.id2word[c] for c in sent] for sent in text]
         result = []
@@ -364,9 +390,9 @@ class Decoder(nn.Module):
             )
             # TODO
             triplets, R_t1, R_t2 = self.extract_items(
-                sample,
                 sent,
                 text_id[i, :].unsqueeze(0).contiguous(),
+                mask,
                 encoder_o[i, :, :].unsqueeze(0).contiguous(),
                 (h, c),
             )
@@ -390,7 +416,7 @@ class Decoder(nn.Module):
         return _subject_id, _subject_name
 
     def extract_items(
-        self, sample, sent, text_id, encoder_o, h
+        self, sent, text_id, mask, encoder_o, h
     ) -> List[Dict[str, str]]:
 
         R = []
@@ -398,7 +424,12 @@ class Decoder(nn.Module):
         R_t2 = []
 
         sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).unsqueeze(1)
-        t1_out, h = self.t1(sos, encoder_o, h)
+        # t1_out, h = self.t1(sos, encoder_o, h)
+        t1_out, h, t1_encoder_o = self.t1(sos, encoder_o, h, mask)
+
+        # t1_out, h, new_encoder_o = self.t1(t1_in, encoder_o, h, mask)
+        # t2_out, h, new_encoder_o = self.t2(t2_in, new_encoder_o, h, mask)
+        # t3_out, h, new_encoder_o = self.t3(t3_in, new_encoder_o, h, mask)
 
         # t1
         rels = t1_out.squeeze().tolist()
@@ -408,8 +439,8 @@ class Decoder(nn.Module):
         for r_id, r_name in zip(rels_id, rels_name):
             # t2
             t2_in = torch.LongTensor([r_id]).cuda(self.gpu)
-            t2_out, h = self.t2(t2_in, encoder_o, h)
-
+            # t2_out, h = self.t2(t2_in, encoder_o, h)
+            t2_out, t2_h, t2_encoder_o = self.t2(t2_in, t1_encoder_o, h, mask)
             _subject_id, _subject_name = self._pos_2_entity(sent, t2_out)
 
             R_t1.append({"predicate": r_name})
@@ -420,7 +451,9 @@ class Decoder(nn.Module):
                         torch.LongTensor([[s1]]).cuda(self.gpu),
                         torch.LongTensor([[s2]]).cuda(self.gpu),
                     )
-                    t3_out, h = self.t3(t3_in, encoder_o, h)
+                    # t3_out, h = self.t3(t3_in, encoder_o, h)
+                    t3_out, t3_h, t3_encoder_o = self.t2(t3_in, t2_encoder_o, t2_h, mask)
+
                     _object_id, _object_name = self._pos_2_entity(sent, t3_out)
 
                     R_t2.append({"subject": s_name, "predicate": r_name})
