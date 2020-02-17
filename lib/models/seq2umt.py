@@ -289,7 +289,7 @@ class Decoder(nn.Module):
 
     def to_rel(self, input, h, encoder_o, mask):
         output, attn, h = self.forward_step(input, h, encoder_o)
-        ew_encoder_o = seq_and_vec([encoder_o, output.squeeze(1)])
+        new_encoder_o = seq_and_vec([encoder_o, output.squeeze(1)])
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
         new_encoder_o = self.conv2_to_1_rel(new_encoder_o)
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
@@ -392,7 +392,7 @@ class Decoder(nn.Module):
             triplets, R_t1, R_t2 = self.extract_items(
                 sent,
                 text_id[i, :].unsqueeze(0).contiguous(),
-                mask,
+                mask[i, :].unsqueeze(0).contiguous(),
                 encoder_o[i, :, :].unsqueeze(0).contiguous(),
                 (h, c),
             )
@@ -432,7 +432,10 @@ class Decoder(nn.Module):
         # t3_out, h, new_encoder_o = self.t3(t3_in, new_encoder_o, h, mask)
 
         # t1
+        # print(t1_out.size())
         rels = t1_out.squeeze().tolist()
+        # print(rels.size())
+        # exit()
         rels_id = [i for i, r in enumerate(rels) if r > 0]
         rels_name = [self.id2rel[i] for i, r in enumerate(rels) if r > 0]
 
@@ -452,7 +455,7 @@ class Decoder(nn.Module):
                         torch.LongTensor([[s2]]).cuda(self.gpu),
                     )
                     # t3_out, h = self.t3(t3_in, encoder_o, h)
-                    t3_out, t3_h, t3_encoder_o = self.t2(t3_in, t2_encoder_o, t2_h, mask)
+                    t3_out, t3_h, t3_encoder_o = self.t3(t3_in, t2_encoder_o, t2_h, mask)
 
                     _object_id, _object_name = self._pos_2_entity(sent, t3_out)
 
