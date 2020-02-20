@@ -186,7 +186,6 @@ class Chinese_seq2umt_preprocessing(Chinese):
 
             return id
 
-        # TODO diff order tree
         order = self.hyper.order
 
         tree = self.spo_to_tree(spo_list, order)

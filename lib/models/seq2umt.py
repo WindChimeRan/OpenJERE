@@ -133,7 +133,7 @@ class Seq2umt(ABCModel):
             t1_out, t2_out, t3_out = self.decoder.train_forward(sample, o, h)
             (t2_out1, t2_out2), (t3_out1, t3_out2) = t2_out, t3_out
 
-            t1_loss = self.BCE(t1_out, t1_gt)
+            t1_loss = self.BCE(t1_out.unsqueeze(1), t1_gt)
             t2_loss = self.mBCE(t2_out1, t2_gt1, mask) + self.mBCE(
                 t2_out2, t2_gt2, mask
             )
