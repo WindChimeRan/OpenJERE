@@ -75,7 +75,7 @@ class Chinese_seq2umt_preprocessing(Chinese):
         #     exit()
         return result
 
-    def spo_to_tree(self, spo_list: List[Dict[str, str]]) -> List[Tuple[str]]:
+    def spo_to_tree(self, spo_list: List[Dict[str, str]], order=('predicate', 'subject', 'object')) -> List[Tuple[str]]:
         """return the ground truth of the tree: rel, subj, obj, used for teacher forcing.
 
         r: given text, one of the relations
@@ -97,16 +97,16 @@ class Chinese_seq2umt_preprocessing(Chinese):
         # rel, subj, obj
         #
         result = []
-        rel = [t["predicate"] for t in spo_list]
-        for r in rel:
-            subj = [t["subject"] for t in spo_list if t["predicate"] == r]
-            for s in subj:
-                obj = [
-                    t["object"]
+        t1_out = [t[order[0]] for t in spo_list]
+        for t1_in in t1_out:
+            t2_out = [t[order[1]] for t in spo_list if t[order[0]] == t1_in]
+            for t2_in in t2_out:
+                t3_out = [
+                    t[order[2]]
                     for t in spo_list
-                    if t["predicate"] == r and t["subject"] == s
+                    if t[order[0]] == t1_in and t[order[1]] == t2_in
                 ]
-                result.append((r, s, rel, subj, obj))
+                result.append((t1_in, t2_in, t1_out, t2_out, t3_out))
         return result
 
     def spo_to_seq(self, text: str, spo_list: List[Dict[str, str]]):
@@ -192,30 +192,33 @@ class Chinese_seq2umt_preprocessing(Chinese):
 
         results = []
         for t in tree:
-            r, s, rel, subj, obj = t
+            t1_in, t2_in, t1_out, t2_out, t3_out = t
+            # r, s, rel, subj, obj = t
 
-            s1, s2, o1, o2 = [[0] * len(tokens) for _ in range(4)]
-
+            # rel
             rel_idx = [0] * len(self.relation_vocab)
-            for rel_name in rel:
+            for rel_name in t1_out:
                 rel_idx[self.relation_vocab[rel_name]] = 1
-            for subj_name in subj:
+
+            # head tail
+            s1, s2, o1, o2 = [[0] * len(tokens) for _ in range(4)]
+            for subj_name in t2_out:
                 id = find(tokens, subj_name)
                 s1[id] = 1
                 s2[id + len(self.hyper.tokenizer(subj_name)) - 1] = 1
-            for obj_name in obj:
+            for obj_name in t3_out:
                 id = find(tokens, obj_name)
                 o1[id] = 1
                 o2[id + len(self.hyper.tokenizer(obj_name)) - 1] = 1
 
-            r = self.relation_vocab[r]
-            k1 = find(tokens, s)
-            k2 = k1 + len(self.hyper.tokenizer(s)) - 1
+            t1_in = self.relation_vocab[t1_in]
+            k1 = find(tokens, t2_in)
+            k2 = k1 + len(self.hyper.tokenizer(t2_in)) - 1
 
             result = {
                 "text": text,
                 "spo_list": spo_list,
-                "r": r,
+                "r": t1_in,
                 "k1": k1,
                 "k2": k2,
                 "rel_gt": rel_idx,

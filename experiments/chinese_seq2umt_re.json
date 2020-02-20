@@ -17,7 +17,7 @@
     "bio_emb_size": 50,
     "hidden_size": 200,
     "threshold": 0.5,
-    "order": ["rel", "head", "tail"],
+    "order": ["predicate", "subject", "object"],
     "activation": "tanh",
     "optimizer": "adam",
     "epoch_num":100,
