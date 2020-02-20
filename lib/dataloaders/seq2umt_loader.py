@@ -61,13 +61,15 @@ class Seq2umt_Dataset(Abstract_dataset):
             self.T,
             self.S1,
             self.S2,
-            self.K1_in,
-            self.K2_in,
+            self.S_K1_in,
+            self.O_K1_in,
+            self.S_K2_in,
+            self.O_K2_in,
             self.O1,
             self.O2,
             self.R_in,
             self.R_gt,
-        ) = ([] for _ in range(9))
+        ) = ([] for _ in range(11))
         # (
         #     self.T,
         #     self.T1_out,
@@ -90,8 +92,10 @@ class Seq2umt_Dataset(Abstract_dataset):
 
             # training
             r = instance.get("r", 0)
-            k1 = instance.get("k1", 0)
-            k2 = instance.get("k2", 0)
+            s_k1 = instance.get("s_k1", 0)
+            s_k2 = instance.get("s_k2", 0)
+            o_k1 = instance.get("o_k1", 0)
+            o_k2 = instance.get("o_k2", 0)
 
             rel_gt = instance.get("rel_gt", [])
             s1_gt = instance.get("s1_gt", [])
@@ -115,8 +119,10 @@ class Seq2umt_Dataset(Abstract_dataset):
             # self.T3_out.append(t3_out)
 
             self.R_in.append(r)
-            self.K1_in.append([k1])
-            self.K2_in.append([k2])
+            self.S_K1_in.append([s_k1])
+            self.S_K2_in.append([s_k2])
+            self.O_K1_in.append([o_k1])
+            self.O_K2_in.append([o_k2])
 
         self.T = np.array(seq_padding(self.T))
 
@@ -127,7 +133,12 @@ class Seq2umt_Dataset(Abstract_dataset):
         self.O2 = np.array(seq_padding(self.O2))
         self.R_gt = np.array(self.R_gt)
 
-        self.K1_in, self.K2_in = np.array(self.K1_in), np.array(self.K2_in)
+        # self.K1_in, self.K2_in = np.array(self.K1_in), np.array(self.K2_in)
+        # only two time step are used for training
+        self.S_K1_in = np.array(self.S_K1_in)
+        self.S_K2_in = np.array(self.S_K2_in)
+        self.O_K1_in = np.array(self.O_K1_in)
+        self.O_K2_in = np.array(self.O_K2_in)
         self.R_in = np.array(self.R_in)
 
     def __getitem__(self, index):
@@ -140,8 +151,10 @@ class Seq2umt_Dataset(Abstract_dataset):
             self.O2[index],
             self.R_gt[index],
             self.R_in[index],
-            self.K1_in[index],
-            self.K2_in[index],
+            self.S_K1_in[index],
+            self.S_K2_in[index],
+            self.O_K1_in[index],
+            self.O_K2_in[index],
             self.text_list[index],
             len(self.text_list[index]),
             self.spo_list[index],
@@ -155,7 +168,7 @@ class Batch_reader(object):
     def __init__(self, data):
         transposed_data = list(zip(*data))
 
-        lens = transposed_data[10]
+        lens = transposed_data[12]
         transposed_data, orig_idx = sort_all(transposed_data, lens)
 
         self.orig_idx = orig_idx
@@ -170,12 +183,14 @@ class Batch_reader(object):
         self.R_gt = torch.FloatTensor(transposed_data[5])
         self.R_in = torch.LongTensor(transposed_data[6])
 
-        self.K1 = torch.LongTensor(transposed_data[7])
-        self.K2 = torch.LongTensor(transposed_data[8])
+        self.S_K1_in = torch.LongTensor(transposed_data[7])
+        self.S_K2_in = torch.LongTensor(transposed_data[8])
+        self.O_K1_in = torch.LongTensor(transposed_data[9])
+        self.O_K2_in = torch.LongTensor(transposed_data[10])
+        self.text = transposed_data[11]
+        self.length = transposed_data[12]
 
-        self.text = transposed_data[9]
-
-        self.spo_gold = transposed_data[11]
+        self.spo_gold = transposed_data[-1]
 
     def pin_memory(self):
 
@@ -188,8 +203,10 @@ class Batch_reader(object):
         self.R_gt = self.R_gt.pin_memory()
         self.R_in = self.R_in.pin_memory()
 
-        self.K1 = self.K1.pin_memory()
-        self.K2 = self.K2.pin_memory()
+        self.S_K1_in = self.S_K1_in.pin_memory()
+        self.S_K2_in = self.S_K2_in.pin_memory()
+        self.O_K1_in = self.O_K1_in.pin_memory()
+        self.O_K2_in = self.O_K2_in.pin_memory()
 
         return self
 

@@ -210,6 +210,9 @@ class Chinese_seq2umt_preprocessing(Chinese):
 
         def to_in_key(inp, name):
             # side effect!
+            if not inp:
+                return None
+
             if name == "predicate":
                 rel_in = self.relation_vocab[inp]
                 out = rel_in
@@ -225,26 +228,31 @@ class Chinese_seq2umt_preprocessing(Chinese):
         for t in tree:
             t1_in, t2_in, t1_out, t2_out, t3_out = t
 
-            for name, ori in zip(order, (t1_out, t2_out, t3_out)):
-                new = op_dic[name](ori)
+            for name, ori_out, ori_in in zip(order, (t1_out, t2_out, t3_out), (t1_in, t2_in, None)):
+                new_out = op_dic[name](ori_out)
                 if name == "predicate":
-                    rel_idx = new
+                    rel_idx = new_out
+                    rel_in = to_in_key(ori_in, name)
                 elif name == "subject":
-                    s1, s2 = new
+                    s1, s2 = new_out
+                    s_k1, s_k2 = to_in_key(ori_in, name)
                 elif name == "object":
-                    o1, o2 = new
+                    o1, o2 = new_out
+                    o_k1, o_k2 = to_in_key(ori_in, name)
                 else:
                     raise ValueError("should be in predicate, subject, object")
 
             rel_in = to_in_key(t1_in, order[0])
-            k1, k2 = to_in_key(t2_in, order[1])
+            s_k1, s_k2 = to_in_key(t2_in, order[1])
 
             result = {
                 "text": text,
                 "spo_list": spo_list,
                 "r": rel_in,
-                "k1": k1,
-                "k2": k2,
+                "s_k1": s_k1,
+                "s_k2": s_k2,
+                "o_k1": o_k1,
+                "o_k2": o_k2,
                 "rel_gt": rel_idx,
                 "s1_gt": s1,
                 "s2_gt": s2,

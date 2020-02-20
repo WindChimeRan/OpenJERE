@@ -364,7 +364,7 @@ class Decoder(nn.Module):
         )
         t1_in = sos
         t2_in = sample.R_in.cuda(self.gpu)
-        t3_in = sample.K1.cuda(self.gpu), sample.K2.cuda(self.gpu)
+        t3_in = sample.S_K1_in.cuda(self.gpu), sample.S_K2_in.cuda(self.gpu)
         t = text_id = sample.T.cuda(self.gpu)
         mask = torch.gt(torch.unsqueeze(text_id, 2), 0).type(
             torch.cuda.FloatTensor
