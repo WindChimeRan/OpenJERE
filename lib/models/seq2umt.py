@@ -72,11 +72,7 @@ class Seq2umt(ABCModel):
         self.word_vocab = json.load(
             open(os.path.join(self.data_root, "word_vocab.json"), "r")
         )
-        # self.relation_vocab = json.load(
-        #     open(os.path.join(self.data_root, "relation_vocab.json"), "r")
-        # )
-        # self.id2word = {v: k for k, v in self.word_vocab.items()}
-        # self.id2rel = {v: k for k, v in self.relation_vocab.items()}
+
         self.mBCE = MaskedBCE()
         self.BCE = torch.nn.BCEWithLogitsLoss()
         self.metrics = F1_triplet()
@@ -99,20 +95,25 @@ class Seq2umt(ABCModel):
         )
 
     def run_metrics(self, output):
-        # # whole triplet 
-        # self.metrics(output["decode_result"], output["spo_gold"])
+        # # whole triplet
+        self.metrics(
+            output["decode_result"],
+            output["spo_gold"],
+            get_seq=lambda dic: (dic["object"], dic["predicate"], dic["subject"]),
+        )
 
         # # rel only
         # self.metrics(output["decode_result"], output["spo_gold"], get_seq=lambda dic: (dic["predicate"],))
 
         # rel + head
-        self.metrics(output["decode_result"], output["spo_gold"], get_seq=lambda dic: (dic["predicate"], dic["subject"]))
+        # self.metrics(output["decode_result"], output["spo_gold"], get_seq=lambda dic: (dic["predicate"], dic["subject"]))
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
         output = {}
 
         t = text_id = sample.T.cuda(self.gpu)
+        length = sample.length
         mask = torch.gt(torch.unsqueeze(text_id, 2), 0).type(
             torch.cuda.FloatTensor
         )  # (batch_size,sent_len,1)
@@ -126,7 +127,7 @@ class Seq2umt(ABCModel):
         t3_gt1 = sample.O1.cuda(self.gpu)
         t3_gt2 = sample.O2.cuda(self.gpu)
 
-        o, h = self.encoder(t)
+        o, h = self.encoder(t, length)
         if is_train:
 
             t1_out, t2_out, t3_out = self.decoder.train_forward(sample, o, h)
@@ -143,7 +144,6 @@ class Seq2umt(ABCModel):
             loss_sum = t1_loss + t2_loss + t3_loss
             output["loss"] = loss_sum
         else:
-            # TODO
             result, result_t1, result_t2 = self.decoder.test_forward(sample, o, h)
             output["decode_result"] = result
             output["decode_t1"] = result_t1
@@ -162,7 +162,7 @@ class Encoder(nn.Module):
 
         self.lstm1 = nn.LSTM(
             input_size=word_emb_size,
-            hidden_size=int(word_emb_size / 2),
+            hidden_size=int(lstm_hidden_size / 2),
             num_layers=1,
             batch_first=True,
             bidirectional=True,
@@ -170,7 +170,7 @@ class Encoder(nn.Module):
 
         self.lstm2 = nn.LSTM(
             input_size=word_emb_size,
-            hidden_size=int(word_emb_size / 2),
+            hidden_size=int(lstm_hidden_size / 2),
             num_layers=1,
             batch_first=True,
             bidirectional=True,
@@ -178,8 +178,8 @@ class Encoder(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv1d(
-                in_channels=word_emb_size * 2,  # 输入的深度
-                out_channels=word_emb_size,  # filter 的个数，输出的高度
+                in_channels=lstm_hidden_size * 2,  # 输入的深度
+                out_channels=lstm_hidden_size,  # filter 的个数，输出的高度
                 kernel_size=3,  # filter的长与宽
                 stride=1,  # 每隔多少步跳一下
                 padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
@@ -189,24 +189,27 @@ class Encoder(nn.Module):
 
         # self.comb = nn.Linear(word_emb_size * 2, word_emb_size)
 
-    def forward(self, t):
+    def forward(self, t, length):
         mask = torch.gt(torch.unsqueeze(t, 2), 0).type(
             torch.cuda.FloatTensor
         )  # (batch_size,sent_len,1)
         mask.requires_grad = False
+        SEQ = mask.size(1)
+
         emb = t = self.embeds(t)
 
         t = self.fc1_dropout(t)
+        t = nn.utils.rnn.pack_padded_sequence(t, lengths=length, batch_first=True)
+        # t = t.mul(mask)  # (batch_size,sent_len,char_size)
 
-        t = t.mul(mask)  # (batch_size,sent_len,char_size)
+        t1, (h_n, c_n) = self.lstm1(t, None)
+        # t2, (h_n, c_n) = self.lstm2(t1, None)
+        t1, _ = nn.utils.rnn.pad_packed_sequence(t1, batch_first=True, total_length=SEQ)
 
-        t, (h_n, c_n) = self.lstm1(t, None)
-        t, (h_n, c_n) = self.lstm2(t, None)
+        t_max, t_max_index = seq_max_pool([t1, mask])
 
-        t_max, t_max_index = seq_max_pool([t, mask])
-
-        t_dim = list(t.size())[-1]
-        o = seq_and_vec([t, t_max])
+        t_dim = list(t1.size())[-1]
+        o = seq_and_vec([t1, t_max])
 
         o = o.permute(0, 2, 1)
         o = self.conv1(o)
@@ -225,6 +228,7 @@ class Decoder(nn.Module):
         self.data_root = hyper.data_root
         self.gpu = hyper.gpu
         self.word_emb_size = self.hyper.emb_size
+        self.hidden_size = self.hyper.hidden_size
         self.word_vocab = json.load(
             open(os.path.join(self.data_root, "word_vocab.json"), "r")
         )
@@ -241,7 +245,7 @@ class Decoder(nn.Module):
 
         self.lstm1 = nn.LSTM(
             input_size=self.word_emb_size,
-            hidden_size=self.word_emb_size,
+            hidden_size=self.hidden_size,
             num_layers=1,
             batch_first=True,
             bidirectional=False,
@@ -250,19 +254,19 @@ class Decoder(nn.Module):
         self.use_attention = True
         self.attention = Attention(self.word_emb_size)
         self.conv2_to_1_rel = nn.Conv1d(
-                in_channels=self.word_emb_size * 2,  # 输入的深度
-                out_channels=self.word_emb_size,  # filter 的个数，输出的高度
-                kernel_size=3,  # filter的长与宽
-                stride=1,  # 每隔多少步跳一下
-                padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
-            )
+            in_channels=self.hidden_size * 2,  # 输入的深度
+            out_channels=self.word_emb_size,  # filter 的个数，输出的高度
+            kernel_size=3,  # filter的长与宽
+            stride=1,  # 每隔多少步跳一下
+            padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
+        )
         self.conv2_to_1_ent = nn.Conv1d(
-                in_channels=self.word_emb_size * 2,  # 输入的深度
-                out_channels=self.word_emb_size,  # filter 的个数，输出的高度
-                kernel_size=3,  # filter的长与宽
-                stride=1,  # 每隔多少步跳一下
-                padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
-            )
+            in_channels=self.hidden_size * 2,  # 输入的深度
+            out_channels=self.word_emb_size,  # filter 的个数，输出的高度
+            kernel_size=3,  # filter的长与宽
+            stride=1,  # 每隔多少步跳一下
+            padding=1,  # 周围围上一圈 if stride= 1, pading=(kernel_size-1)/2
+        )
         self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.word_emb_size)
         self.rel_emb = nn.Embedding(
             num_embeddings=self.rel_num, embedding_dim=self.word_emb_size
@@ -290,6 +294,7 @@ class Decoder(nn.Module):
     def to_rel(self, input, h, encoder_o, mask):
         output, attn, h = self.forward_step(input, h, encoder_o)
         new_encoder_o = seq_and_vec([encoder_o, output.squeeze(1)])
+
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
         new_encoder_o = self.conv2_to_1_rel(new_encoder_o)
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
@@ -301,6 +306,7 @@ class Decoder(nn.Module):
         return output, h, new_encoder_o, attn
 
     def to_ent(self, input, h, encoder_o, mask):
+        # TODO mask
         output, attn, h = self.forward_step(input, h, encoder_o)
         output = output.squeeze(1)
 
@@ -308,10 +314,10 @@ class Decoder(nn.Module):
 
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
         new_encoder_o = self.conv2_to_1_ent(new_encoder_o)
-
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
 
         output = activation(new_encoder_o)
+
         ent1 = self.ent1(output).squeeze(2)
         ent2 = self.ent2(output).squeeze(2)
 
@@ -388,7 +394,6 @@ class Decoder(nn.Module):
                 decoder_h[0][:, i, :].unsqueeze(1).contiguous(),
                 decoder_h[1][:, i, :].unsqueeze(1).contiguous(),
             )
-            # TODO
             triplets, R_t1, R_t2 = self.extract_items(
                 sent,
                 text_id[i, :].unsqueeze(0).contiguous(),
@@ -415,9 +420,7 @@ class Decoder(nn.Module):
                         break
         return _subject_id, _subject_name
 
-    def extract_items(
-        self, sent, text_id, mask, encoder_o, h
-    ) -> List[Dict[str, str]]:
+    def extract_items(self, sent, text_id, mask, encoder_o, h) -> List[Dict[str, str]]:
 
         R = []
         R_t1 = []
@@ -455,7 +458,9 @@ class Decoder(nn.Module):
                         torch.LongTensor([[s2]]).cuda(self.gpu),
                     )
                     # t3_out, h = self.t3(t3_in, encoder_o, h)
-                    t3_out, t3_h, t3_encoder_o = self.t3(t3_in, t2_encoder_o, t2_h, mask)
+                    t3_out, t3_h, t3_encoder_o = self.t3(
+                        t3_in, t2_encoder_o, t2_h, mask
+                    )
 
                     _object_id, _object_name = self._pos_2_entity(sent, t3_out)
 

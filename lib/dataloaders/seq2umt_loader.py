@@ -42,6 +42,13 @@ def seq_padding_vec(X):
     return [x + [[1, 0]] * (ML - len(x)) for x in X]
 
 
+def sort_all(batch, lens):
+    """ Sort all fields by descending order of lens, and return the original indices. """
+    unsorted_all = [lens] + [range(len(lens))] + list(batch)
+    sorted_all = [list(t) for t in zip(*sorted(zip(*unsorted_all), reverse=True))]
+    return sorted_all[2:], sorted_all[1]
+
+
 class Seq2umt_Dataset(Abstract_dataset):
     def __init__(self, hyper, dataset):
 
@@ -132,6 +139,12 @@ class Batch_reader(object):
     def __init__(self, data):
         transposed_data = list(zip(*data))
 
+        lens = transposed_data[10]
+        transposed_data, orig_idx = sort_all(transposed_data, lens)
+
+        self.orig_idx = orig_idx
+        self.length = transposed_data[10]
+
         self.T = torch.LongTensor(transposed_data[0])
         self.S1 = torch.FloatTensor(transposed_data[1])
         self.S2 = torch.FloatTensor(transposed_data[2])
@@ -145,7 +158,7 @@ class Batch_reader(object):
         self.K2 = torch.LongTensor(transposed_data[8])
 
         self.text = transposed_data[9]
-        self.length = transposed_data[10]
+
         self.spo_gold = transposed_data[11]
 
     def pin_memory(self):

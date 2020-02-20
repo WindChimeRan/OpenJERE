@@ -99,14 +99,18 @@ class Seq2umt(ABCModel):
         )
 
     def run_metrics(self, output):
-        # # whole triplet 
+        # # whole triplet
         # self.metrics(output["decode_result"], output["spo_gold"])
 
         # # rel only
         # self.metrics(output["decode_result"], output["spo_gold"], get_seq=lambda dic: (dic["predicate"],))
 
         # rel + head
-        self.metrics(output["decode_result"], output["spo_gold"], get_seq=lambda dic: (dic["predicate"], dic["subject"]))
+        self.metrics(
+            output["decode_result"],
+            output["spo_gold"],
+            get_seq=lambda dic: (dic["predicate"], dic["subject"]),
+        )
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
