@@ -131,6 +131,8 @@ class Seq2umt(ABCModel):
         if is_train:
 
             t1_out, t2_out, t3_out = self.decoder.train_forward(sample, o, h)
+
+            # TODO: unpack map
             (t2_out1, t2_out2), (t3_out1, t3_out2) = t2_out, t3_out
 
             t1_loss = self.BCE(t1_out.unsqueeze(1), t1_gt)
@@ -394,8 +396,22 @@ class Decoder(nn.Module):
             .unsqueeze(1)
         )
         t1_in = sos
-        t2_in = sample.R_in.cuda(self.gpu)
-        t3_in = sample.S_K1_in.cuda(self.gpu), sample.S_K2_in.cuda(self.gpu)
+
+        # t2_in = sample.R_in.cuda(self.gpu)
+        # t3_in = sample.S_K1_in.cuda(self.gpu), sample.S_K2_in.cuda(self.gpu)
+        r_in = sample.R_in.cuda(self.gpu)
+        s_in = sample.S_K1_in.cuda(self.gpu), sample.S_K2_in.cuda(self.gpu)
+        o_in = sample.O_K1_in.cuda(self.gpu), sample.O_K2_in.cuda(self.gpu)
+
+        in_map = {
+            'predicate': r_in,
+            'subject': s_in,
+            'object':  o_in
+        }
+        t2_in = in_map[self.order[0]]
+        t3_in = in_map[self.order[1]]
+        
+
         t = text_id = sample.T.cuda(self.gpu)
         mask = torch.gt(torch.unsqueeze(text_id, 2), 0).type(
             torch.cuda.FloatTensor
