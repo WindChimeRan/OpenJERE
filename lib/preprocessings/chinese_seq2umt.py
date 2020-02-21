@@ -211,7 +211,7 @@ class Chinese_seq2umt_preprocessing(Chinese):
         def to_in_key(inp, name):
             # side effect!
             if not inp:
-                return None
+                return None, None
 
             if name == "predicate":
                 rel_in = self.relation_vocab[inp]
