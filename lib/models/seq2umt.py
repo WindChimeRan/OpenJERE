@@ -325,23 +325,29 @@ class Decoder(nn.Module):
 
         return output, h, new_encoder_o, attn
 
-    def t1(self, sos, encoder_o, h, mask):
-        # sos - rel
+    def sos2ent(self, sos, encoder_o, h, mask):
+        pass
+
+    def ent2rel(self, sos, encoder_o, h, mask):
+        pass
+
+    def sos2rel(self, sos, encoder_o, h, mask):
+        # t1
         input = sos
-        t1_out, h, new_encoder_o, attn = self.t1_op(input, h, encoder_o, mask)
+        t1_out, h, new_encoder_o, attn = self.to_rel(input, h, encoder_o, mask)
         t1_out = t1_out.squeeze(1)
 
         return t1_out, h, new_encoder_o
 
-    def t2(self, t2_in, encoder_o, h, mask):
-        # rel - head
+    def rel2ent(self, t2_in, encoder_o, h, mask):
+        # t2
         input = self.rel_emb(t2_in)
         input = input.unsqueeze(1)
-        t2_out, h, new_encoder_o, attn = self.t2_op(input, h, encoder_o, mask)
+        t2_out, h, new_encoder_o, attn = self.to_ent(input, h, encoder_o, mask)
         return t2_out, h, new_encoder_o
 
-    def t3(self, t3_in, encoder_o, h, mask):
-        # head - tail
+    def ent2ent(self, t3_in, encoder_o, h, mask):
+        # t3
         k1, k2 = t3_in
         k1 = seq_gather([encoder_o, k1])
         k2 = seq_gather([encoder_o, k2])
@@ -351,7 +357,7 @@ class Decoder(nn.Module):
         # k = torch.cat([k1,k2],1)
         input = k1 + k2
         input = input.unsqueeze(1)
-        t3_out, h, new_encoder_o, attn = self.t3_op(input, h, encoder_o, mask)
+        t3_out, h, new_encoder_o, attn = self.to_ent(input, h, encoder_o, mask)
         return t3_out, h, new_encoder_o
 
     def train_forward(self, sample, encoder_o, h):
@@ -371,9 +377,9 @@ class Decoder(nn.Module):
         )  # (batch_size,sent_len,1)
         mask.requires_grad = False
         # only using encoder_o
-        t1_out, h, new_encoder_o = self.t1(t1_in, encoder_o, h, mask)
-        t2_out, h, new_encoder_o = self.t2(t2_in, new_encoder_o, h, mask)
-        t3_out, h, new_encoder_o = self.t3(t3_in, new_encoder_o, h, mask)
+        t1_out, h, new_encoder_o = self.sos2rel(t1_in, encoder_o, h, mask)
+        t2_out, h, new_encoder_o = self.rel2ent(t2_in, new_encoder_o, h, mask)
+        t3_out, h, new_encoder_o = self.ent2ent(t3_in, new_encoder_o, h, mask)
 
         return t1_out, t2_out, t3_out
 
@@ -428,7 +434,7 @@ class Decoder(nn.Module):
 
         sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).unsqueeze(1)
         # t1_out, h = self.t1(sos, encoder_o, h)
-        t1_out, h, t1_encoder_o = self.t1(sos, encoder_o, h, mask)
+        t1_out, h, t1_encoder_o = self.sos2rel(sos, encoder_o, h, mask)
 
         # t1_out, h, new_encoder_o = self.t1(t1_in, encoder_o, h, mask)
         # t2_out, h, new_encoder_o = self.t2(t2_in, new_encoder_o, h, mask)
@@ -446,7 +452,7 @@ class Decoder(nn.Module):
             # t2
             t2_in = torch.LongTensor([r_id]).cuda(self.gpu)
             # t2_out, h = self.t2(t2_in, encoder_o, h)
-            t2_out, t2_h, t2_encoder_o = self.t2(t2_in, t1_encoder_o, h, mask)
+            t2_out, t2_h, t2_encoder_o = self.rel2ent(t2_in, t1_encoder_o, h, mask)
             _subject_id, _subject_name = self._pos_2_entity(sent, t2_out)
 
             R_t1.append({"predicate": r_name})
@@ -458,7 +464,7 @@ class Decoder(nn.Module):
                         torch.LongTensor([[s2]]).cuda(self.gpu),
                     )
                     # t3_out, h = self.t3(t3_in, encoder_o, h)
-                    t3_out, t3_h, t3_encoder_o = self.t3(
+                    t3_out, t3_h, t3_encoder_o = self.ent2ent(
                         t3_in, t2_encoder_o, t2_h, mask
                     )
 

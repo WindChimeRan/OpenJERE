@@ -228,7 +228,9 @@ class Chinese_seq2umt_preprocessing(Chinese):
         for t in tree:
             t1_in, t2_in, t1_out, t2_out, t3_out = t
 
-            for name, ori_out, ori_in in zip(order, (t1_out, t2_out, t3_out), (t1_in, t2_in, None)):
+            for name, ori_out, ori_in in zip(
+                order, (t1_out, t2_out, t3_out), (t1_in, t2_in, None)
+            ):
                 new_out = op_dic[name](ori_out)
                 if name == "predicate":
                     rel_idx = new_out
