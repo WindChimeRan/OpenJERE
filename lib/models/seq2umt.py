@@ -536,7 +536,9 @@ class Decoder(nn.Module):
             )
         return inp
 
-    def extract_items(self, sent, text_id, mask, encoder_o, t1_h) -> List[Dict[str, str]]:
+    def extract_items(
+        self, sent, text_id, mask, encoder_o, t1_h
+    ) -> List[Dict[str, str]]:
 
         R = []
 
@@ -549,21 +551,25 @@ class Decoder(nn.Module):
         for id1, name1 in zip(t1_id, t1_name):
 
             t2_in = self._out2in(id1, self.order[0])
-            t2_out, t2_h, t2_encoder_o = self.state_map[1](t2_in, t1_encoder_o, t1_h, mask)
+            t2_out, t2_h, t2_encoder_o = self.state_map[1](
+                t2_in, t1_encoder_o, t1_h, mask
+            )
             t2_id, t2_name = self.decode_state_map[1](sent, t2_out)
 
             if len(t2_name) > 0:
                 for id2, name2 in zip(t2_id, t2_name):
                     t3_in = self._out2in(id2, self.order[1])
-                    t3_out, _, _ = self.state_map[2](
-                        t3_in, t2_encoder_o, t2_h, mask
-                    )
+                    t3_out, _, _ = self.state_map[2](t3_in, t2_encoder_o, t2_h, mask)
 
                     _, t3_name = self.decode_state_map[2](sent, t3_out)
 
                     for name3 in t3_name:
                         R.append(
-                            {self.order[0]: name1, self.order[1]: name2, self.order[2]: name3}
+                            {
+                                self.order[0]: name1,
+                                self.order[1]: name2,
+                                self.order[2]: name3,
+                            }
                         )
 
         return R

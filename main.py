@@ -289,8 +289,7 @@ class Runner(object):
                 if new_score >= score:
                     score = new_score
                     best_epoch = epoch
-        print('best epoch: %d \t F1 = %d' % (best_epoch, score))
-
+        print("best epoch: %d \t F1 = %d" % (best_epoch, score))
 
 
 if __name__ == "__main__":
