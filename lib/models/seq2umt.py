@@ -66,6 +66,7 @@ class Seq2umt(ABCModel):
     def __init__(self, hyper):
         super(Seq2umt, self).__init__()
         self.hyper = hyper
+        self.order = hyper.order
         self.data_root = hyper.data_root
         self.gpu = hyper.gpu
 
@@ -119,31 +120,36 @@ class Seq2umt(ABCModel):
         )  # (batch_size,sent_len,1)
         mask.requires_grad = False
 
-        t1_gt = sample.R_gt.cuda(self.gpu)
+        rel_gt = sample.R_gt.cuda(self.gpu)
 
-        t2_gt1 = sample.S1.cuda(self.gpu)
-        t2_gt2 = sample.S2.cuda(self.gpu)
+        head_gt1 = sample.S1.cuda(self.gpu)
+        head_gt2 = sample.S2.cuda(self.gpu)
 
-        t3_gt1 = sample.O1.cuda(self.gpu)
-        t3_gt2 = sample.O2.cuda(self.gpu)
+        tail_gt1 = sample.O1.cuda(self.gpu)
+        tail_gt2 = sample.O2.cuda(self.gpu)
 
         o, h = self.encoder(t, length)
+
         if is_train:
 
-            t1_out, t2_out, t3_out = self.decoder.train_forward(sample, o, h)
+            t_outs = self.decoder.train_forward(sample, o, h)
 
-            # TODO: unpack map
-            (t2_out1, t2_out2), (t3_out1, t3_out2) = t2_out, t3_out
+            out_map = dict(zip(self.order, (0, 1, 2)))
 
-            t1_loss = self.BCE(t1_out.unsqueeze(1), t1_gt)
-            t2_loss = self.mBCE(t2_out1, t2_gt1, mask) + self.mBCE(
-                t2_out2, t2_gt2, mask
+            rel_out = t_outs[out_map['predicate']]
+            head_out1, head_out2 = t_outs[out_map['subject']]
+            tail_out1, tail_out2 = t_outs[out_map['object']]
+            
+            rel_loss = self.BCE(rel_out, rel_gt)
+            head_loss = self.mBCE(head_out1, head_gt1, mask) + self.mBCE(
+                head_out2, head_gt2, mask
             )
-            t3_loss = self.mBCE(t3_out1, t3_gt1, mask) + self.mBCE(
-                t3_out2, t3_gt2, mask
+            tail_loss = self.mBCE(tail_out1, tail_gt1, mask) + self.mBCE(
+                tail_out2, tail_gt2, mask
             )
 
-            loss_sum = t1_loss + t2_loss + t3_loss
+            loss_sum = rel_loss + head_loss + tail_loss
+
             output["loss"] = loss_sum
         else:
             result, result_t1, result_t2 = self.decoder.test_forward(sample, o, h)
@@ -241,9 +247,7 @@ class Decoder(nn.Module):
         self.id2word = {v: k for k, v in self.word_vocab.items()}
         self.id2rel = {v: k for k, v in self.relation_vocab.items()}
 
-        self.fc1_dropout = nn.Sequential(
-            nn.Dropout(0.25).cuda(),  # drop 20% of the neuron
-        ).cuda()
+        self.fc1_dropout = nn.Dropout(0.25).cuda(),  # drop 25% of the neuron
 
         self.lstm1 = nn.LSTM(
             input_size=self.word_emb_size,
@@ -282,13 +286,13 @@ class Decoder(nn.Module):
         self.order = self.hyper.order
 
         self.state_map = {
-            ('predicate', 'subject', 'object'): (self.sos2rel, self.rel2ent, self.ent2ent),
-            ('predicate', 'object', 'subject'): (self.sos2rel, self.rel2ent, self.ent2ent),
-            ('subject', 'object', 'predicate'): (self.sos2ent, self.ent2ent, self.ent2rel),
-            ('subject', 'predicate', 'object'): (self.sos2ent, self.ent2rel, self.ent2ent),
-            ('object', 'subject', 'predicate'): (self.sos2ent, self.ent2ent, self.ent2rel),
-            ('object', 'predicate', 'subject'): (self.sos2ent, self.ent2rel, self.ent2ent),
-        }[tuple(self.order)]
+            ('predicate', 'subject', 'object'): [self.sos2rel, self.rel2ent, self.ent2ent],
+            ('predicate', 'object', 'subject'): [self.sos2rel, self.rel2ent, self.ent2ent],
+            ('subject', 'object', 'predicate'): [self.sos2ent, self.ent2ent, self.ent2rel],
+            ('subject', 'predicate', 'object'): [self.sos2ent, self.ent2rel, self.ent2ent],
+            ('object', 'subject', 'predicate'): [self.sos2ent, self.ent2ent, self.ent2rel],
+            ('object', 'predicate', 'subject'): [self.sos2ent, self.ent2rel, self.ent2ent],
+        }[tuple(self.order)]    
 
     def forward_step(self, input_var, hidden, encoder_outputs):
 
@@ -397,19 +401,20 @@ class Decoder(nn.Module):
         )
         t1_in = sos
 
-        # t2_in = sample.R_in.cuda(self.gpu)
-        # t3_in = sample.S_K1_in.cuda(self.gpu), sample.S_K2_in.cuda(self.gpu)
         r_in = sample.R_in.cuda(self.gpu)
         s_in = sample.S_K1_in.cuda(self.gpu), sample.S_K2_in.cuda(self.gpu)
         o_in = sample.O_K1_in.cuda(self.gpu), sample.O_K2_in.cuda(self.gpu)
 
+        in_tuple = (r_in, s_in, o_in)
+
         in_map = {
-            'predicate': r_in,
-            'subject': s_in,
-            'object':  o_in
+            'predicate': 0,
+            'subject': 1,
+            'object':  2
         }
-        t2_in = in_map[self.order[0]]
-        t3_in = in_map[self.order[1]]
+
+        t2_in = in_tuple[in_map[self.order[0]]]
+        t3_in = in_tuple[in_map[self.order[1]]]
         
 
         t = text_id = sample.T.cuda(self.gpu)
@@ -426,9 +431,7 @@ class Decoder(nn.Module):
 
     def test_forward(self, sample, encoder_o, decoder_h) -> List[List[Dict[str, str]]]:
         text_id = sample.T.cuda(self.gpu)
-        mask = torch.gt(torch.unsqueeze(text_id, 2), 0).type(
-            torch.cuda.FloatTensor
-        )  # (batch_size,sent_len,1)
+        mask = torch.gt(torch.unsqueeze(text_id, 2), 0).float().cuda(self.gpu)  # (batch_size,sent_len,1)
         mask.requires_grad = False
         text = text_id.tolist()
         text = [[self.id2word[c] for c in sent] for sent in text]
@@ -475,17 +478,16 @@ class Decoder(nn.Module):
 
         sos = self.sos(torch.tensor(0).cuda(self.gpu)).unsqueeze(0).unsqueeze(1)
         # t1_out, h = self.t1(sos, encoder_o, h)
+        
         t1_out, h, t1_encoder_o = self.sos2rel(sos, encoder_o, h, mask)
 
         # t1_out, h, new_encoder_o = self.t1(t1_in, encoder_o, h, mask)
         # t2_out, h, new_encoder_o = self.t2(t2_in, new_encoder_o, h, mask)
         # t3_out, h, new_encoder_o = self.t3(t3_in, new_encoder_o, h, mask)
 
-        # t1
-        # print(t1_out.size())
+
         rels = t1_out.squeeze().tolist()
-        # print(rels.size())
-        # exit()
+
         rels_id = [i for i, r in enumerate(rels) if r > 0]
         rels_name = [self.id2rel[i] for i, r in enumerate(rels) if r > 0]
 

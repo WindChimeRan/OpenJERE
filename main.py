@@ -265,6 +265,7 @@ class Runner(object):
             num_workers=4,
         )
 
+
         for epoch in range(self.hyper.epoch_num):
             self.model.train()
             pbar = tqdm(
@@ -280,6 +281,7 @@ class Runner(object):
                 self.optimizer.step()
 
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
+
 
             self.save_model(epoch)
             if epoch % self.hyper.print_epoch == 0 and epoch > 2:
