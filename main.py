@@ -237,17 +237,18 @@ class Runner(object):
 
                 self.model.run_metrics(output)
 
-            result = self.model.get_metric()
-            print(
-                ", ".join(
-                    [
-                        "%s: %.4f" % (name, value)
-                        for name, value in result.items()
-                        if not name.startswith("_")
-                    ]
-                )
-                + " ||"
+        result = self.model.get_metric()
+        print(
+            ", ".join(
+                [
+                    "%s: %.4f" % (name, value)
+                    for name, value in result.items()
+                    if not name.startswith("_")
+                ]
             )
+            + " ||"
+        )
+        return result["fscore"]
 
     def train(self):
         train_set = self.Dataset(self.hyper, self.hyper.train)
@@ -264,8 +265,8 @@ class Runner(object):
             pin_memory=True,
             num_workers=4,
         )
-
-
+        score = 0
+        best_epoch = 0
         for epoch in range(self.hyper.epoch_num):
             self.model.train()
             pbar = tqdm(
@@ -282,10 +283,14 @@ class Runner(object):
 
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
 
-
             self.save_model(epoch)
             if epoch % self.hyper.print_epoch == 0 and epoch > 2:
-                self.evaluation(dev_loader)
+                new_score = self.evaluation(dev_loader)
+                if new_score >= score:
+                    score = new_score
+                    best_epoch = epoch
+        print('best epoch: %d \t F1 = %d' % (best_epoch, score))
+
 
 
 if __name__ == "__main__":

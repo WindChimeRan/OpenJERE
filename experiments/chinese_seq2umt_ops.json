@@ -1,6 +1,6 @@
 {
     "dataset": "chinese",
-    "model": "seq2umt",
+    "model": "seq2umt_ops",
     "data_root": "data/chinese/seq2umt_ops",
     "raw_data_root": "raw_data/chinese",
     "train": "train_data.json",

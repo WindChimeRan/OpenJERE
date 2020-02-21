@@ -13,8 +13,6 @@
 
 [official tensorflow version](https://github.com/bekou/multihead_joint_entity_relation_extraction)
 
-## Multi-Head-Seq2Seq
-
 ## CopyMTL
 
 
@@ -48,10 +46,9 @@ python data_split.py
 
 
 ```shell
-python main.py --mode preprocessing
-python main.py --mode train
-python main.py --mode evaluation
-
+python main.py --mode preprocessing --exp chinese_seq2umt_sop
+python main.py --mode train --exp chinese_seq2umt_sop
+python main.py --mode evaluation --exp chinese_seq2umt_sop
 ```
 
 ## EWebNLG
