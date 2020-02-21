@@ -42,7 +42,7 @@ parser.add_argument(
     "--exp_name",
     "-e",
     type=str,
-    default="chinese_seq2umt_re",
+    default="chinese_seq2umt",
     help="experiments/exp_name.json",
 )
 parser.add_argument(

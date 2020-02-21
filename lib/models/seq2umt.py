@@ -275,11 +275,18 @@ class Decoder(nn.Module):
         self.rel = nn.Linear(self.word_emb_size, self.rel_num)
         self.ent1 = nn.Linear(self.word_emb_size, 1)
         self.ent2 = nn.Linear(self.word_emb_size, 1)
-        # self.rel_tag = nn.Linear(self.word_emb_size * 2, self.rel_num)
 
-        self.t1_op = self.to_rel
-        self.t2_op = self.to_ent
-        self.t3_op = self.to_ent
+        # order
+        self.order = self.hyper.order
+
+        self.state_map = {
+            ('predicate', 'subject', 'object'): (self.sos2rel, self.rel2ent, self.ent2ent),
+            ('predicate', 'object', 'subject'): (self.sos2rel, self.rel2ent, self.ent2ent),
+            ('subject', 'object', 'predicate'): (self.sos2ent, self.ent2ent, self.ent2rel),
+            ('subject', 'predicate', 'object'): (self.sos2ent, self.ent2rel, self.ent2ent),
+            ('object', 'subject', 'predicate'): (self.sos2ent, self.ent2ent, self.ent2rel),
+            ('object', 'predicate', 'subject'): (self.sos2ent, self.ent2rel, self.ent2ent),
+        }[tuple(self.order)]
 
     def forward_step(self, input_var, hidden, encoder_outputs):
 
@@ -326,10 +333,28 @@ class Decoder(nn.Module):
         return output, h, new_encoder_o, attn
 
     def sos2ent(self, sos, encoder_o, h, mask):
-        pass
+        # TODO: test
+        input = sos
+        out, h, new_encoder_o, attn = self.to_ent(input, h, encoder_o, mask)
+        return out, h, new_encoder_o        
 
-    def ent2rel(self, sos, encoder_o, h, mask):
-        pass
+
+    def ent2rel(self, t_in, encoder_o, h, mask):
+        # TODO: test
+        k1, k2 = t_in
+        k1 = seq_gather([encoder_o, k1])
+        k2 = seq_gather([encoder_o, k2])
+
+        # TODO
+        # print(k1.size())
+        # k = torch.cat([k1,k2],1)
+        input = k1 + k2
+        input = input.unsqueeze(1)
+        out, h, new_encoder_o, attn = self.to_rel(input, h, encoder_o, mask)
+        out = out.squeeze(1)
+
+        return out, h, new_encoder_o
+
 
     def sos2rel(self, sos, encoder_o, h, mask):
         # t1
@@ -377,9 +402,9 @@ class Decoder(nn.Module):
         )  # (batch_size,sent_len,1)
         mask.requires_grad = False
         # only using encoder_o
-        t1_out, h, new_encoder_o = self.sos2rel(t1_in, encoder_o, h, mask)
-        t2_out, h, new_encoder_o = self.rel2ent(t2_in, new_encoder_o, h, mask)
-        t3_out, h, new_encoder_o = self.ent2ent(t3_in, new_encoder_o, h, mask)
+        t1_out, h, new_encoder_o = self.state_map[0](t1_in, encoder_o, h, mask)
+        t2_out, h, new_encoder_o = self.state_map[1](t2_in, new_encoder_o, h, mask)
+        t3_out, h, new_encoder_o = self.state_map[2](t3_in, new_encoder_o, h, mask)
 
         return t1_out, t2_out, t3_out
 
