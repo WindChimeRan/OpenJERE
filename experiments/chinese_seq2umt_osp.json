@@ -20,7 +20,7 @@
     "order": ["object", "subject", "predicate"],
     "activation": "tanh",
     "optimizer": "adam",
-    "epoch_num":100,
+    "epoch_num":50,
     "batch_size_train": 256,
     "batch_size_eval":400,
     "seperator": "",
