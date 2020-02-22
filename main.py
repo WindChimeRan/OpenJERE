@@ -284,7 +284,7 @@ class Runner(object):
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
 
             self.save_model(epoch)
-            if epoch % self.hyper.print_epoch == 0 and epoch > 2:
+            if epoch % self.hyper.print_epoch == 0 and epoch >= 2:
                 new_score = self.evaluation(dev_loader)
                 if new_score >= score:
                     score = new_score

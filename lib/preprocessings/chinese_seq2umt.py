@@ -244,8 +244,9 @@ class Chinese_seq2umt_preprocessing(Chinese):
                 else:
                     raise ValueError("should be in predicate, subject, object")
 
-            rel_in = to_in_key(t1_in, order[0])
-            s_k1, s_k2 = to_in_key(t2_in, order[1])
+            
+            # rel_in = to_in_key(t1_in, order[0])
+            # s_k1, s_k2 = to_in_key(t2_in, order[1])
 
             result = {
                 "text": text,
