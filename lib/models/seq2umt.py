@@ -302,7 +302,7 @@ class Decoder(nn.Module):
             ("subject", "predicate", "object"): [
                 self.sos2ent,
                 self.ent2rel,
-                self.ent2ent,
+                self.rel2ent,
             ],
             ("object", "subject", "predicate"): [
                 self.sos2ent,
@@ -312,7 +312,7 @@ class Decoder(nn.Module):
             ("object", "predicate", "subject"): [
                 self.sos2ent,
                 self.ent2rel,
-                self.ent2ent,
+                self.rel2ent,
             ],
         }[tuple(self.order)]
 
