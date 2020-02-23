@@ -198,4 +198,4 @@ def _split_cond(cond: str, data_root: str):
 if __name__ == "__main__":
 
     data_split("chinese", CHINESE)
-    data_split("webnlg", WEBNLG)
+    # data_split("webnlg", WEBNLG)
