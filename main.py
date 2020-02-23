@@ -34,7 +34,7 @@ from lib.dataloaders import (
     Seq2umt_loader,
 )
 from lib.metrics import F1_triplet
-from lib.models import MultiHeadSelection, CopyMB, Twotagging, Seq2umt
+from lib.models import MultiHeadSelection, CopyMB, Twotagging, Seq2umt, Threetagging
 from lib.config import Hyper
 
 parser = argparse.ArgumentParser()
@@ -89,6 +89,9 @@ class Runner(object):
             Dataset = Seq2umt_Dataset
             Loader = Seq2umt_loader
 
+        elif name == "threetagging":
+            Dataset = Seq2umt_Dataset
+            Loader = Seq2umt_loader
         else:
             raise ValueError("wrong name!")
         return Dataset, Loader
@@ -103,6 +106,7 @@ class Runner(object):
             "copymb": Chinese_copymb_preprocessing(self.hyper),
             "twotagging": Chinese_twotagging_preprocessing(self.hyper),
             "seq2umt": Chinese_seq2umt_preprocessing(self.hyper),
+            "threetagging": Chinese_seq2umt_preprocessing(self.hyper),
         }
         return p[name]
 
@@ -116,6 +120,8 @@ class Runner(object):
             self.model = Twotagging(self.hyper).cuda(self.gpu)
         elif self.hyper.model == "seq2umt":
             self.model = Seq2umt(self.hyper).cuda(self.gpu)
+        elif self.hyper.model == "threetagging":
+            self.model = Threetagging(self.hyper).cuda(self.gpu)
         else:
             raise NotImplementedError("Future works!")
 
@@ -145,7 +151,8 @@ class Runner(object):
                 pin_memory=True,
                 num_workers=8,
             )
-            self.evaluation(loader)
+            f1 = self.evaluation(loader)
+            print('f1 = ', f1)
 
         elif mode == "data_summary":
             self.hyper.vocab_init()
@@ -289,9 +296,7 @@ class Runner(object):
                 if new_score >= score:
                     score = new_score
                     best_epoch = epoch
-        print("best epoch: %d \t F1 = %d" % (best_epoch, score))
-
-
+        print("best epoch: %d \t F1 = %f" % (best_epoch, score))
 if __name__ == "__main__":
     config = Runner(exp_name=args.exp_name)
     config.run(mode=args.mode)
