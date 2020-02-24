@@ -17,13 +17,13 @@ class Abstract_dataset(ABC, Dataset):
         self.data_root = hyper.data_root
 
         self.word_vocab = json.load(
-            open(os.path.join(self.data_root, "word_vocab.json"), "r")
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding='utf-8')
         )
         self.relation_vocab = json.load(
-            open(os.path.join(self.data_root, "relation_vocab.json"), "r")
+            open(os.path.join(self.data_root, "relation_vocab.json"), "r", encoding='utf-8')
         )
         self.bio_vocab = json.load(
-            open(os.path.join(self.data_root, "bio_vocab.json"), "r")
+            open(os.path.join(self.data_root, "bio_vocab.json"), "r", encoding='utf-8')
         )
 
         self.tokenizer = self.hyper.tokenizer

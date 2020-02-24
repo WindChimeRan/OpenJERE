@@ -43,7 +43,7 @@ class Chinese(ABC):
             pass
         else:
             self.gen_relation_vocab()
-        return json.load(open(self.relation_vocab_path, "r"))
+        return json.load(open(self.relation_vocab_path, "r", encoding='utf-8'))
 
     def gen_bio_vocab(self):
         result = {"<pad>": 3, "B": 0, "I": 1, "O": 2}
@@ -52,14 +52,14 @@ class Chinese(ABC):
     def gen_relation_vocab(self):
         relation_vocab = {}
         i = 0
-        for line in open(self.schema_path, "r"):
+        for line in open(self.schema_path, "r", encoding='utf-8'):
             relation = json.loads(line)["predicate"]
             if relation not in relation_vocab:
                 relation_vocab[relation] = i
                 i += 1
         relation_vocab["N"] = i
         json.dump(
-            relation_vocab, open(self.relation_vocab_path, "w"), ensure_ascii=False
+            relation_vocab, open(self.relation_vocab_path, "w", encoding='utf-8'), ensure_ascii=False
         )
 
     @abstractmethod
@@ -69,7 +69,7 @@ class Chinese(ABC):
         target = os.path.join(self.data_root, "word_vocab.json")
 
         cnt = Counter()
-        with open(source, "r") as s:
+        with open(source, "r", encoding='utf-8') as s:
             for line in s:
                 line = line.strip("\n")
                 if not line:
@@ -87,12 +87,12 @@ class Chinese(ABC):
                 result[k] = i
                 i += 1
         result["oov"] = i
-        json.dump(result, open(target, "w"), ensure_ascii=False)
+        json.dump(result, open(target, "w", encoding='utf-8'), ensure_ascii=False)
 
     def _gen_one_data(self, dataset):
         source = os.path.join(self.raw_data_root, dataset)
         target = os.path.join(self.data_root, dataset)
-        with open(source, "r") as s, open(target, "w") as t:
+        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
             for line in s:
                 newline = self._read_line(line)
                 if newline is not None:
