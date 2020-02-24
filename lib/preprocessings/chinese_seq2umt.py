@@ -297,7 +297,7 @@ class Chinese_seq2umt_preprocessing(Chinese):
     def gen_train_data(self, path):
         source = os.path.join(self.raw_data_root, path)
         target = os.path.join(self.data_root, path)
-        with open(source, "r") as s, open(target, "w") as t:
+        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
             for line in s:
                 newlines = self._train_read_line(line)
                 if newlines is not None:
