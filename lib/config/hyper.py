@@ -42,13 +42,13 @@ class Hyper(object):
 
     def vocab_init(self):
         self.word2id = json.load(
-            open(os.path.join(self.data_root, "word_vocab.json"), "r")
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding='utf-8')
         )
         self.rel2id = json.load(
-            open(os.path.join(self.data_root, "relation_vocab.json"), "r")
+            open(os.path.join(self.data_root, "relation_vocab.json"), "r", encoding='utf-8')
         )
         self.bio_vocab = json.load(
-            open(os.path.join(self.data_root, "bio_vocab.json"), "r")
+            open(os.path.join(self.data_root, "bio_vocab.json"), "r", encoding='utf-8')
         )
         self.id2word = {k: v for v, k in self.word2id.items()}
         self.id2rel = {k: v for v, k in self.rel2id.items()}
