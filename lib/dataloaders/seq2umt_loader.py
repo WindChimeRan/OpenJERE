@@ -80,7 +80,7 @@ class Seq2umt_Dataset(Abstract_dataset):
         #     self.R_in,
         # ) = ([] for _ in range(7))
 
-        for line in open(os.path.join(self.data_root, dataset), "r"):
+        for line in open(os.path.join(self.data_root, dataset), "r", encoding='utf-8'):
             line = line.strip("\n")
             instance = json.loads(line)
 
