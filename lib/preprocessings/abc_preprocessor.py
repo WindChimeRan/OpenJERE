@@ -52,7 +52,7 @@ class Chinese(ABC):
     def gen_relation_vocab(self):
         relation_vocab = {}
         i = 0
-        for line in open(self.schema_path, "r"):
+        for line in open(self.schema_path, "r", encoding='utf-8'):
             relation = json.loads(line)["predicate"]
             if relation not in relation_vocab:
                 relation_vocab[relation] = i
@@ -69,7 +69,7 @@ class Chinese(ABC):
         target = os.path.join(self.data_root, "word_vocab.json")
 
         cnt = Counter()
-        with open(source, "r") as s:
+        with open(source, "r", encoding='utf-8') as s:
             for line in s:
                 line = line.strip("\n")
                 if not line:
