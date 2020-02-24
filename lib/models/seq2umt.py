@@ -71,7 +71,7 @@ class Seq2umt(ABCModel):
         self.gpu = hyper.gpu
 
         self.word_vocab = json.load(
-            open(os.path.join(self.data_root, "word_vocab.json"), "r")
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding='utf-8')
         )
 
         self.mBCE = MaskedBCE()
