@@ -59,7 +59,7 @@ class Chinese(ABC):
                 i += 1
         relation_vocab["N"] = i
         json.dump(
-            relation_vocab, open(self.relation_vocab_path, "w"), ensure_ascii=False
+            relation_vocab, open(self.relation_vocab_path, "w", encoding='utf-8'), ensure_ascii=False
         )
 
     @abstractmethod
