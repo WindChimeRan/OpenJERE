@@ -236,10 +236,10 @@ class Decoder(nn.Module):
         self.word_emb_size = self.hyper.emb_size
         self.hidden_size = self.hyper.hidden_size
         self.word_vocab = json.load(
-            open(os.path.join(self.data_root, "word_vocab.json"), "r")
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding='utf-8')
         )
         self.relation_vocab = json.load(
-            open(os.path.join(self.data_root, "relation_vocab.json"), "r")
+            open(os.path.join(self.data_root, "relation_vocab.json"), "r", encoding='utf-8')
         )
         self.rel_num = len(self.relation_vocab)
         self.id2word = {v: k for k, v in self.word_vocab.items()}
