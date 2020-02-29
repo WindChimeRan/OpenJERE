@@ -29,7 +29,8 @@ class Hyper(object):
         self.rel_emb_size: int
         self.bio_emb_size: int
         self.hidden_size: int
-        self.threshold: float
+        self.dropout: float     = 0.5
+        self.threshold: float   = 0.5
         self.activation: str
         self.optimizer: str
         self.epoch_num: int

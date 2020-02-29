@@ -70,15 +70,7 @@ class Seq2umt_Dataset(Abstract_dataset):
             self.R_in,
             self.R_gt,
         ) = ([] for _ in range(11))
-        # (
-        #     self.T,
-        #     self.T1_out,
-        #     self.T2_out,
-        #     self.T3_out,
-        #     self.K1_in,
-        #     self.K2_in,
-        #     self.R_in,
-        # ) = ([] for _ in range(7))
+
 
         for line in open(os.path.join(self.data_root, dataset), "r", encoding='utf-8'):
             line = line.strip("\n")
@@ -102,9 +94,6 @@ class Seq2umt_Dataset(Abstract_dataset):
             s2_gt = instance.get("s2_gt", [])
             o1_gt = instance.get("o1_gt", [])
             o2_gt = instance.get("o2_gt", [])
-            # t1_out = instance.get("t1_out", [])
-            # t2_out = instance.get("t2_out", [])
-            # t3_out = instance.get("t3_out", [])
 
             self.text_list.append(text)
             self.spo_list.append(spo_list)
@@ -114,9 +103,6 @@ class Seq2umt_Dataset(Abstract_dataset):
             self.O1.append(o1_gt)
             self.O2.append(o2_gt)
             self.R_gt.append(rel_gt)
-            # self.T1_out.append(t1_out)
-            # self.T2_out.append(t2_out)
-            # self.T3_out.append(t3_out)
 
             self.R_in.append(r)
             self.S_K1_in.append([s_k1])

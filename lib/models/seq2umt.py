@@ -164,14 +164,15 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
 
         self.embeds = nn.Embedding(word_dict_length, word_emb_size)
-        self.fc1_dropout = nn.Sequential(nn.Dropout(0.25),)  # drop 20% of the neuron
+        self.fc1_dropout = nn.Sequential(nn.Dropout(0.5),)  # drop 20% of the neuron
 
         self.lstm1 = nn.LSTM(
             input_size=word_emb_size,
             hidden_size=int(lstm_hidden_size / 2),
-            num_layers=1,
+            num_layers=2,
             batch_first=True,
             bidirectional=True,
+            # dropout=0.5,
         )
 
         self.lstm2 = nn.LSTM(
@@ -180,6 +181,7 @@ class Encoder(nn.Module):
             num_layers=1,
             batch_first=True,
             bidirectional=True,
+            # dropout=0.5,
         )
 
         self.conv1 = nn.Sequential(
@@ -209,7 +211,7 @@ class Encoder(nn.Module):
         # t = t.mul(mask)  # (batch_size,sent_len,char_size)
 
         t1, (h_n, c_n) = self.lstm1(t, None)
-        # t2, (h_n, c_n) = self.lstm2(t1, None)
+        # t1, (h_n, c_n) = self.lstm2(t1, None)
         t1, _ = nn.utils.rnn.pad_packed_sequence(t1, batch_first=True, total_length=SEQ)
 
         t_max, t_max_index = seq_max_pool([t1, mask])
@@ -254,6 +256,7 @@ class Decoder(nn.Module):
             batch_first=True,
             bidirectional=False,
         )
+        self.dropout = nn.Sequential(nn.Dropout(0.5),)  # drop 20% of the neuron
 
         self.use_attention = True
         self.attention = Attention(self.word_emb_size)
@@ -367,7 +370,8 @@ class Decoder(nn.Module):
         new_encoder_o = self.conv2_to_1_rel(new_encoder_o)
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
 
-        output = activation(new_encoder_o)
+        output = self.dropout(new_encoder_o)
+        output = activation(output)
         output = self.rel(output)
         output, _ = seq_max_pool([output, mask])
 
@@ -384,7 +388,9 @@ class Decoder(nn.Module):
         new_encoder_o = self.conv2_to_1_ent(new_encoder_o)
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
 
-        output = activation(new_encoder_o)
+        
+        output = self.dropout(new_encoder_o)
+        output = activation(output)
 
         ent1 = self.ent1(output).squeeze(2)
         ent2 = self.ent2(output).squeeze(2)
@@ -394,7 +400,6 @@ class Decoder(nn.Module):
         return output, h, new_encoder_o, attn
 
     def sos2ent(self, sos, encoder_o, h, mask):
-        # TODO: test
         input = sos
         out, h, new_encoder_o, attn = self.to_ent(input, h, encoder_o, mask)
         return out, h, new_encoder_o
@@ -405,9 +410,6 @@ class Decoder(nn.Module):
         k1 = seq_gather([encoder_o, k1])
         k2 = seq_gather([encoder_o, k2])
 
-        # TODO
-        # print(k1.size())
-        # k = torch.cat([k1,k2],1)
         input = k1 + k2
         input = input.unsqueeze(1)
         out, h, new_encoder_o, attn = self.to_rel(input, h, encoder_o, mask)
@@ -470,7 +472,7 @@ class Decoder(nn.Module):
             torch.cuda.FloatTensor
         )  # (batch_size,sent_len,1)
         mask.requires_grad = False
-        # only using encoder_o
+
         t1_out, h, new_encoder_o = self.state_map[0](t1_in, encoder_o, h, mask)
         t2_out, h, new_encoder_o = self.state_map[1](t2_in, new_encoder_o, h, mask)
         t3_out, h, new_encoder_o = self.state_map[2](t3_in, new_encoder_o, h, mask)
