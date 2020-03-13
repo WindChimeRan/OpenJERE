@@ -8,10 +8,10 @@ from overrides import overrides
 
 from cached_property import cached_property
 
-from lib.preprocessings.abc_preprocessor import Chinese
+from lib.preprocessings.abc_preprocessor import Chinese_preprocessing
 
 
-class Chinese_selection_preprocessing(Chinese):
+class Chinese_selection_preprocessing(Chinese_preprocessing):
     def __init__(self, hyper):
         super(Chinese_selection_preprocessing, self).__init__(hyper)
 

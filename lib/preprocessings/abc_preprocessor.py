@@ -9,33 +9,21 @@ from abc import ABC, abstractmethod
 from cached_property import cached_property
 
 
-class Chinese(ABC):
+class Preprocessing(ABC):
     def __init__(self, hyper):
         self.hyper = hyper
         self.raw_data_root = hyper.raw_data_root
         self.data_root = hyper.data_root
-        self.schema_path = os.path.join(self.raw_data_root, "all_50_schemas")
 
-        if not os.path.exists(self.schema_path):
-            raise FileNotFoundError(
-                "schema file not found, please check your downloaded data!"
-            )
+        # self.schema_path = os.path.join(self.raw_data_root, "all_50_schemas")
+        # if not os.path.exists(self.schema_path):
+        #     raise FileNotFoundError(
+        #         "schema file not found, please check your downloaded data!"
+        #     )
         if not os.path.exists(self.data_root):
             os.makedirs(self.data_root)
 
         self.relation_vocab_path = os.path.join(self.data_root, hyper.relation_vocab)
-
-    @abstractmethod
-    def _read_line(self, line: str) -> Optional[str]:
-        raise NotImplementedError("abc method!")
-
-    def gen_all_data(self):
-        for path in self.hyper.raw_data_list:
-            self._gen_one_data(path)
-
-    @abstractmethod
-    def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
-        pass
 
     @cached_property
     def relation_vocab(self):
@@ -45,22 +33,29 @@ class Chinese(ABC):
             self.gen_relation_vocab()
         return json.load(open(self.relation_vocab_path, "r", encoding='utf-8'))
 
+    @abstractmethod
+    def _read_line(self, line: str) -> Optional[str]:
+        raise NotImplementedError("abc method!")
+
+    @abstractmethod
+    def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
+        pass
+
+    def gen_all_data(self):
+        for path in self.hyper.raw_data_list:
+            self._gen_one_data(path)
+
     def gen_bio_vocab(self):
         result = {"<pad>": 3, "B": 0, "I": 1, "O": 2}
         json.dump(result, open(os.path.join(self.data_root, "bio_vocab.json"), "w"))
 
+    @abstractmethod
     def gen_relation_vocab(self):
-        relation_vocab = {}
-        i = 0
-        for line in open(self.schema_path, "r", encoding='utf-8'):
-            relation = json.loads(line)["predicate"]
-            if relation not in relation_vocab:
-                relation_vocab[relation] = i
-                i += 1
-        relation_vocab["N"] = i
-        json.dump(
-            relation_vocab, open(self.relation_vocab_path, "w", encoding='utf-8'), ensure_ascii=False
-        )
+        pass
+
+    @abstractmethod
+    def yield_text(self, source: str) -> List[str]:
+        pass
 
     @abstractmethod
     def gen_vocab(self, min_freq: int, init_result: Dict[str, int]):
@@ -69,19 +64,13 @@ class Chinese(ABC):
         target = os.path.join(self.data_root, "word_vocab.json")
 
         cnt = Counter()
-        with open(source, "r", encoding='utf-8') as s:
-            for line in s:
-                line = line.strip("\n")
-                if not line:
-                    return None
-                instance = json.loads(line)
-                text = list(instance["text"])
-                cnt.update(text)
+
+        for text in self.yield_text(source):
+            cnt.update(text)
+
         result = init_result
         i = len(init_result)
         assert max(init_result.values()) == i - 1
-        # result = {'<pad>': 0}
-        # i = 1
         for k, v in cnt.items():
             if v > min_freq:
                 result[k] = i
@@ -107,3 +96,42 @@ class Chinese(ABC):
 
     def spo_to_relations(self, text: str, spo_list: List[Dict[str, str]]) -> List[str]:
         return [t["predicate"] for t in spo_list]
+
+class Chinese_preprocessing(Preprocessing):
+    def __init__(self, hyper):
+        super(Chinese_preprocessing, self).__init__(hyper)
+        self.schema_path = os.path.join(self.raw_data_root, "all_50_schemas")
+        if not os.path.exists(self.schema_path):
+            raise FileNotFoundError(
+                "schema file not found, please check your downloaded data!"
+            )
+
+    # chinese specific
+    def gen_relation_vocab(self):
+        relation_vocab = {}
+        i = 0
+        for line in open(self.schema_path, "r", encoding='utf-8'):
+            relation = json.loads(line)["predicate"]
+            if relation not in relation_vocab:
+                relation_vocab[relation] = i
+                i += 1
+        relation_vocab["N"] = i
+        json.dump(
+            relation_vocab, open(self.relation_vocab_path, "w", encoding='utf-8'), ensure_ascii=False
+        )
+
+    # chinese specific
+    @abstractmethod
+    def gen_vocab(self, min_freq: int, init_result: Dict[str, int]):
+        super(Chinese_preprocessing, self).gen_vocab(min_freq, init_result)
+
+    def yield_text(self, source: str) -> List[str]:
+        key = "text"
+        with open(source, "r", encoding='utf-8') as s:
+            for line in s:
+                line = line.strip("\n")
+                if not line:
+                    return None
+                instance = json.loads(line)
+                text = list(instance[key])
+                yield text
