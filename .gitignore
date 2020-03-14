@@ -19,5 +19,6 @@ raw_data/EWebNLG/data/webnlg/raw/*
 # raw_data/saoke/SAOKE_DATA.json
 # new_*
 **.json
+**.zip
 **/all_50_schemas
 !experiments/*
