@@ -76,7 +76,7 @@ class Twotagging_Dataset(Abstract_dataset):
             line = line.strip("\n")
             instance = json.loads(line)
 
-            text = instance["text"]
+            text = self.hyper.tokenizer(instance["text"])
             items = {}
             for sp in instance["spo_list"]:
                 subjectid = text.find(sp["subject"])
@@ -93,7 +93,7 @@ class Twotagging_Dataset(Abstract_dataset):
                         )
                     )
             if items:
-                self.text_list.append(instance["text"])
+                self.text_list.append(self.hyper.tokenizer(instance["text"]))
                 self.spo_list.append(instance["spo_list"])
                 text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in text]
                 self.T.append(text_id)

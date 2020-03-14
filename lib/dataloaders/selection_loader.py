@@ -29,7 +29,7 @@ class Selection_Dataset(Abstract_dataset):
             instance = json.loads(line)
 
             self.selection_list.append(instance["selection"])
-            self.text_list.append(instance["text"])
+            self.text_list.append(self.hyper.tokenizer(instance["text"]))
             self.bio_list.append(instance["bio"])
             self.spo_list.append(instance["spo_list"])
 
