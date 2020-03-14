@@ -1,5 +1,5 @@
 {
-    "dataset": "chinese",
+    "dataset": "nyt",
     "model": "seq2umt",
     "data_root": "data/nyt/seq2umt_ops",
     "raw_data_root": "raw_data/nyt",

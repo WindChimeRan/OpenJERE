@@ -83,7 +83,7 @@ class ABC_data_preprocessing(ABC):
         cnt = Counter()
 
         for text in self.yield_key(source, "text"):
-            cnt.update(text)
+            cnt.update(self.hyper.tokenizer(text))
 
         result = init_result
         i = len(init_result)
@@ -106,17 +106,12 @@ class ABC_data_preprocessing(ABC):
 
     def gen_relation_vocab(self):
         relation_vocab = {}
-        i = 0
         rel_set = set()
         source = os.path.join(self.raw_data_root, self.hyper.train)
 
         for spo_list in self.yield_key(source, "spo_list"):
-            # cnt.update(text)
             rel_set.update(self.spo_to_relations(None, spo_list))
-            # relation = json.loads(line)["predicate"]
-            # if relation not in relation_vocab:
-            #     relation_vocab[relation] = i
-            #     i += 1
+
         relation_vocab = {k: v for v, k in enumerate(rel_set)}
         relation_vocab["N"] = len(relation_vocab)
         json.dump(
@@ -133,67 +128,6 @@ class ABC_data_preprocessing(ABC):
                 if not line:
                     return None
                 instance = json.loads(line)
-                text = list(instance[key])
-                yield text
+                value = instance[key]
+                yield value
 
-
-# class Chinese_preprocessing(ABC_data_preprocessing):
-#     def __init__(self, hyper):
-#         super(Chinese_preprocessing, self).__init__(hyper)
-#         self.schema_path = os.path.join(self.raw_data_root, "all_50_schemas")
-#         if not os.path.exists(self.schema_path):
-#             raise FileNotFoundError(
-#                 "schema file not found, please check your downloaded data!"
-#             )
-
-#     def gen_relation_vocab(self):
-#         relation_vocab = {}
-#         i = 0
-#         for line in open(self.schema_path, "r", encoding="utf-8"):
-#             relation = json.loads(line)["predicate"]
-#             if relation not in relation_vocab:
-#                 relation_vocab[relation] = i
-#                 i += 1
-#         relation_vocab["N"] = i
-#         json.dump(
-#             relation_vocab,
-#             open(self.relation_vocab_path, "w", encoding="utf-8"),
-#             ensure_ascii=False,
-#         )
-
-#     def yield_text(self, source: str) -> List[str]:
-#         key = "text"
-#         with open(source, "r", encoding="utf-8") as s:
-#             for line in s:
-#                 line = line.strip("\n")
-#                 if not line:
-#                     return None
-#                 instance = json.loads(line)
-#                 text = list(instance[key])
-#                 yield text
-
-# class NYT_preprocessing(ABC_data_preprocessing):
-#     def __init__(self, hyper):
-#         super(NYT_preprocessing, self).__init__(hyper)
-
-#     def gen_relation_vocab(self):
-#         relation_vocab = {}
-#         i = 0
-#         # TODO
-#         json.dump(
-#             relation_vocab,
-#             open(self.relation_vocab_path, "w", encoding="utf-8"),
-#             ensure_ascii=False,
-#         )
-
-#     def yield_text(self, source: str) -> List[str]:
-#         # TODO
-#         key = "text"
-#         with open(source, "r", encoding="utf-8") as s:
-#             for line in s:
-#                 line = line.strip("\n")
-#                 if not line:
-#                     return None
-#                 instance = json.loads(line)
-#                 text = list(instance[key])
-#                 yield text

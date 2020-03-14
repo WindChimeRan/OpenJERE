@@ -76,9 +76,13 @@ class Seq2umt_Dataset(Abstract_dataset):
             instance = json.loads(line)
 
             text = instance["text"]
+
             spo_list = instance["spo_list"]
 
-            text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in text]
+            text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in self.hyper.tokenizer(text)]
+
+            assert len(text_id) > 0
+
             self.T.append(text_id)
 
             # training

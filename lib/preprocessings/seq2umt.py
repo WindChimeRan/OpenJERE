@@ -200,7 +200,11 @@ class Seq2umt_preprocessing(ABC_data_preprocessing):
             # side effect!
             ent1, ent2 = [[0] * len(tokens) for _ in range(2)]
             for name in outp:
-                id = find(tokens, name)
+                # # TODO
+                # print(tokens)
+                # print(name)
+                # exit()
+                id = find(tokens, self.hyper.tokenizer(name))
                 ent1[id] = 1
                 ent2[id + len(self.hyper.tokenizer(name)) - 1] = 1
             return ent1, ent2
@@ -214,7 +218,7 @@ class Seq2umt_preprocessing(ABC_data_preprocessing):
                 rel_in = self.relation_vocab[inp]
                 out = rel_in
             else:
-                k1 = find(tokens, inp)
+                k1 = find(tokens, self.hyper.tokenizer(inp))
                 k2 = k1 + len(self.hyper.tokenizer(inp)) - 1
                 out = k1, k2
             return out

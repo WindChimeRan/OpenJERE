@@ -17,7 +17,7 @@ def process_line(line):
     text = ins["sentText"]
     spo_list = ins["relationMentions"]
     spo_list = [
-        {"subject": t["em1Text"], "predicate": t["em2Text"], "object": t["label"]}
+        {"subject": t["em1Text"], "object": t["em2Text"], "predicate": t["label"]}
         for t in spo_list
     ]
     new_dic = {"text": text, "spo_list": spo_list}
@@ -45,4 +45,4 @@ if __name__ == "__main__":
 
     reformat(otest, ttest)
     reformat(otrain, ttrain)
-    reformat(tdev, tdev)
+    reformat(odev, tdev)
