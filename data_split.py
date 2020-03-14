@@ -67,7 +67,9 @@ def _split_cond(cond: str, data_root: str):
         target = os.path.join(data_root, "new_test_data.json")
         all_triplet_num = 0
         all_sent_num = 0
-        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
+        with open(source, "r", encoding="utf-8") as s, open(
+            target, "w", encoding="utf-8"
+        ) as t:
             for line in s:
                 line, triplet_num = chinese_read_line(line)
                 t.write(line)
@@ -85,7 +87,9 @@ def _split_cond(cond: str, data_root: str):
         validate_sent = 0
         validate_triplet = 0
 
-        with open(source, "r", encoding='utf-8') as s, open(train, "w", encoding='utf-8') as t, open(validate, "w", encoding='utf-8') as v:
+        with open(source, "r", encoding="utf-8") as s, open(
+            train, "w", encoding="utf-8"
+        ) as t, open(validate, "w", encoding="utf-8") as v:
             for line in s:
                 line, triplet_num = chinese_read_line(line)
                 if random.random() < 0.9:
@@ -106,7 +110,9 @@ def _split_cond(cond: str, data_root: str):
         target = os.path.join(data_root, "new_train_data.json")
         all_triplet_num = 0
         all_sent_num = 0
-        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
+        with open(source, "r", encoding="utf-8") as s, open(
+            target, "w", encoding="utf-8"
+        ) as t:
             for line in s:
                 line, triplet_num = webnlg_read_line(line)
                 t.write(line)
@@ -119,7 +125,9 @@ def _split_cond(cond: str, data_root: str):
         target = os.path.join(data_root, "new_validate_data.json")
         all_triplet_num = 0
         all_sent_num = 0
-        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
+        with open(source, "r", encoding="utf-8") as s, open(
+            target, "w", encoding="utf-8"
+        ) as t:
             for line in s:
                 line, triplet_num = webnlg_read_line(line)
                 t.write(line)
@@ -132,7 +140,9 @@ def _split_cond(cond: str, data_root: str):
         target = os.path.join(data_root, "new_test_data.json")
         all_triplet_num = 0
         all_sent_num = 0
-        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
+        with open(source, "r", encoding="utf-8") as s, open(
+            target, "w", encoding="utf-8"
+        ) as t:
             for line in s:
                 line, triplet_num = webnlg_read_line(line)
                 t.write(line)
@@ -147,7 +157,9 @@ def _split_cond(cond: str, data_root: str):
         all_triplet_num = 0
         all_sent_num = 0
 
-        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
+        with open(source, "r", encoding="utf-8") as s, open(
+            target, "w", encoding="utf-8"
+        ) as t:
             for line in s:
                 line, triplet_num = chinese_read_line(line)
                 if cond == "test5" and triplet_num >= 5:
@@ -174,7 +186,9 @@ def _split_cond(cond: str, data_root: str):
         all_triplet_num = 0
         all_sent_num = 0
 
-        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
+        with open(source, "r", encoding="utf-8") as s, open(
+            target, "w", encoding="utf-8"
+        ) as t:
             for line in s:
                 line, triplet_num = webnlg_read_line(line)
                 if cond == "test5" and triplet_num >= 5:

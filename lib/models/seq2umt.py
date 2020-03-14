@@ -71,7 +71,7 @@ class Seq2umt(ABCModel):
         self.gpu = hyper.gpu
 
         self.word_vocab = json.load(
-            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding='utf-8')
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding="utf-8")
         )
 
         self.mBCE = MaskedBCE()
@@ -238,10 +238,14 @@ class Decoder(nn.Module):
         self.word_emb_size = self.hyper.emb_size
         self.hidden_size = self.hyper.hidden_size
         self.word_vocab = json.load(
-            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding='utf-8')
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding="utf-8")
         )
         self.relation_vocab = json.load(
-            open(os.path.join(self.data_root, "relation_vocab.json"), "r", encoding='utf-8')
+            open(
+                os.path.join(self.data_root, "relation_vocab.json"),
+                "r",
+                encoding="utf-8",
+            )
         )
         self.rel_num = len(self.relation_vocab)
         self.id2word = {v: k for k, v in self.word_vocab.items()}
@@ -388,7 +392,6 @@ class Decoder(nn.Module):
         new_encoder_o = self.conv2_to_1_ent(new_encoder_o)
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
 
-        
         output = self.dropout(new_encoder_o)
         output = activation(output)
 

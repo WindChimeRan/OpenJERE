@@ -8,13 +8,10 @@ from overrides import overrides
 
 from cached_property import cached_property
 
-from lib.preprocessings.abc_preprocessor import Chinese_preprocessing
+from lib.preprocessings.abc_preprocessor import ABC_data_preprocessing
 
 
-class Chinese_seq2umt_preprocessing(Chinese_preprocessing):
-    def __init__(self, hyper):
-        super(Chinese_seq2umt_preprocessing, self).__init__(hyper)
-
+class Seq2umt_preprocessing(ABC_data_preprocessing):
     @overrides
     def _read_line(self, line: str) -> Optional[str]:
         # for evaluation only
@@ -244,7 +241,6 @@ class Chinese_seq2umt_preprocessing(Chinese_preprocessing):
                 else:
                     raise ValueError("should be in predicate, subject, object")
 
-            
             # rel_in = to_in_key(t1_in, order[0])
             # s_k1, s_k2 = to_in_key(t2_in, order[1])
 
@@ -276,11 +272,11 @@ class Chinese_seq2umt_preprocessing(Chinese_preprocessing):
                 return False
         return True
 
-    @overrides
-    def gen_vocab(self, min_freq: int):
-        super(Chinese_seq2umt_preprocessing, self).gen_vocab(
-            min_freq, init_result={"<pad>": 0}
-        )
+    # @overrides
+    # def gen_vocab(self, min_freq: int):
+    #     super(Chinese_seq2umt_preprocessing, self).gen_vocab(
+    #         min_freq, init_result={"<pad>": 0}
+    #     )
 
     @overrides
     def gen_all_data(self):
@@ -297,7 +293,9 @@ class Chinese_seq2umt_preprocessing(Chinese_preprocessing):
     def gen_train_data(self, path):
         source = os.path.join(self.raw_data_root, path)
         target = os.path.join(self.data_root, path)
-        with open(source, "r", encoding='utf-8') as s, open(target, "w", encoding='utf-8') as t:
+        with open(source, "r", encoding="utf-8") as s, open(
+            target, "w", encoding="utf-8"
+        ) as t:
             for line in s:
                 newlines = self._train_read_line(line)
                 if newlines is not None:

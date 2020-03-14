@@ -152,7 +152,7 @@ class Runner(object):
                 num_workers=8,
             )
             f1 = self.evaluation(loader)
-            print('f1 = ', f1)
+            print("f1 = ", f1)
 
         elif mode == "data_summary":
             self.hyper.vocab_init()
@@ -297,6 +297,8 @@ class Runner(object):
                     score = new_score
                     best_epoch = epoch
         print("best epoch: %d \t F1 = %f" % (best_epoch, score))
+
+
 if __name__ == "__main__":
     config = Runner(exp_name=args.exp_name)
     config.run(mode=args.mode)

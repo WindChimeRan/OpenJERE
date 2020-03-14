@@ -8,12 +8,12 @@ from overrides import overrides
 
 from cached_property import cached_property
 
-from lib.preprocessings.abc_preprocessor import Chinese_preprocessing
+from lib.preprocessings.abc_preprocessor import ABC_data_preprocessing
 
 
-class Chinese_selection_preprocessing(Chinese_preprocessing):
-    def __init__(self, hyper):
-        super(Chinese_selection_preprocessing, self).__init__(hyper)
+class Selection_preprocessing(ABC_data_preprocessing):
+    # def __init__(self, hyper):
+    #     super(Chinese_selection_preprocessing, self).__init__(hyper)
 
     @overrides
     def _read_line(self, line: str) -> Optional[str]:
@@ -65,11 +65,11 @@ class Chinese_selection_preprocessing(Chinese_preprocessing):
                 return False
         return True
 
-    @overrides
-    def gen_vocab(self, min_freq: int):
-        super(Chinese_selection_preprocessing, self).gen_vocab(
-            min_freq, init_result={"<pad>": 0}
-        )
+    # @overrides
+    # def gen_vocab(self, min_freq: int):
+    #     super(Chinese_selection_preprocessing, self).gen_vocab(
+    #         min_freq, init_result={"<pad>": 0}
+    #     )
 
     def spo_to_selection(
         self, text: str, spo_list: List[Dict[str, str]]

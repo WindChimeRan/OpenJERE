@@ -428,7 +428,7 @@ class Decoder(nn.Module):
         output = ent1, ent2
 
         return output, t_max, new_encoder_o, mask
-    
+
     def ent2ent_without_rnn(self, inp, encoder_o, t_max, mask):
         k1, k2 = inp
         k1 = seq_gather([encoder_o, k1])
@@ -436,16 +436,16 @@ class Decoder(nn.Module):
         k2 = seq_gather([encoder_o, k2])
 
         k = torch.cat([k1, k2], 1)
-        print(k.size()) # 64, 256
-        print(encoder_o.size()) # 64, 300, 128
-        print(t_max.size()) # 64, 64
+        print(k.size())  # 64, 256
+        print(encoder_o.size())  # 64, 300, 128
+        print(t_max.size())  # 64, 64
         new_encoder_o = seq_and_vec([encoder_o, t_max])
         new_encoder_o = seq_and_vec([new_encoder_o, k])
         new_encoder_o = encoder_o.permute(0, 2, 1)
         print(new_encoder_o.size())
         new_encoder_o = self.conv4_to_1_ent(new_encoder_o)
         print(new_encoder_o.size())
-        print('cnn ok')
+        print("cnn ok")
 
         new_encoder_o = new_encoder_o.permute(0, 2, 1)
 
@@ -528,7 +528,9 @@ class Decoder(nn.Module):
         mask.requires_grad = False
         # only using encoder_o
         t1_out, t_max, new_encoder_o, mask = self.no2ent(None, encoder_o, t_max, mask)
-        t2_out, t_max, new_encoder_o, mask = self.ent2ent_without_rnn(t2_in, new_encoder_o, t_max, mask)
+        t2_out, t_max, new_encoder_o, mask = self.ent2ent_without_rnn(
+            t2_in, new_encoder_o, t_max, mask
+        )
         print(new_encoder_o.size())
         exit()
         t3_out = None
