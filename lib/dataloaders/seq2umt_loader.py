@@ -79,7 +79,10 @@ class Seq2umt_Dataset(Abstract_dataset):
 
             spo_list = instance["spo_list"]
 
-            text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in self.hyper.tokenizer(text)]
+            text_id = [
+                self.word_vocab.get(c, self.word_vocab["oov"])
+                for c in self.hyper.tokenizer(text)
+            ]
 
             assert len(text_id) > 0
 
@@ -98,7 +101,7 @@ class Seq2umt_Dataset(Abstract_dataset):
             o1_gt = instance.get("o1_gt", [])
             o2_gt = instance.get("o2_gt", [])
 
-            self.text_list.append(text)
+            self.text_list.append(self.hyper.tokenizer(text))
             self.spo_list.append(spo_list)
 
             self.S1.append(s1_gt)

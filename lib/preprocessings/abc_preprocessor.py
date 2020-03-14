@@ -130,4 +130,3 @@ class ABC_data_preprocessing(ABC):
                 instance = json.loads(line)
                 value = instance[key]
                 yield value
-
