@@ -51,6 +51,12 @@ python main.py --mode train --exp chinese_seq2umt_ops
 python main.py --mode evaluation --exp chinese_seq2umt_ops
 ```
 
+```shell
+python main.py --mode preprocessing --exp nyt_seq2umt_ops
+python main.py --mode train --exp nyt_seq2umt_ops
+python main.py --mode evaluation --exp nyt_seq2umt_ops
+```
+
 ## EWebNLG
 
 [code](https://github.com/zhijing-jin/WebNLG_Reader)
