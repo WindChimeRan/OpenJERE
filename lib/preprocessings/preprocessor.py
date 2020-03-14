@@ -5,7 +5,7 @@ from lib.preprocessings.copymb import Copymb_preprocessing
 from lib.preprocessings.selection import Selection_preprocessing
 from lib.preprocessings.two_tagging import Twotagging_preprocessing
 
-
+# Chinese
 class Chinese_seq2umt_preprocessing(Chinese_preprocessing, Seq2umt_preprocessing):
     def __init__(self, hyper):
         super().__init__(hyper)

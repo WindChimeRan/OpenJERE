@@ -46,9 +46,9 @@ python data_split.py
 
 
 ```shell
-python main.py --mode preprocessing --exp chinese_seq2umt_sop
-python main.py --mode train --exp chinese_seq2umt_sop
-python main.py --mode evaluation --exp chinese_seq2umt_sop
+python main.py --mode preprocessing --exp chinese_seq2umt_ops
+python main.py --mode train --exp chinese_seq2umt_ops
+python main.py --mode evaluation --exp chinese_seq2umt_ops
 ```
 
 ## EWebNLG

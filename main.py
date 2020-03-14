@@ -17,10 +17,10 @@ from collections import Counter
 from torch.optim import Adam, SGD
 
 from lib.preprocessings import (
-    Chinese_selection_preprocessing,
-    Chinese_copymb_preprocessing,
-    Chinese_twotagging_preprocessing,
-    Chinese_seq2umt_preprocessing,
+    Selection_preprocessing,
+    Copymb_preprocessing,
+    Twotagging_preprocessing,
+    Seq2umt_preprocessing,
 )
 
 from lib.dataloaders import (
@@ -102,11 +102,11 @@ class Runner(object):
 
     def _preprocessor(self, name: str):
         p = {
-            "selection": Chinese_selection_preprocessing(self.hyper),
-            "copymb": Chinese_copymb_preprocessing(self.hyper),
-            "twotagging": Chinese_twotagging_preprocessing(self.hyper),
-            "seq2umt": Chinese_seq2umt_preprocessing(self.hyper),
-            "threetagging": Chinese_seq2umt_preprocessing(self.hyper),
+            "selection": Selection_preprocessing(self.hyper),
+            "copymb": Copymb_preprocessing(self.hyper),
+            "twotagging": Twotagging_preprocessing(self.hyper),
+            "seq2umt": Seq2umt_preprocessing(self.hyper),
+            "threetagging": Seq2umt_preprocessing(self.hyper),
         }
         return p[name]
 
@@ -272,6 +272,13 @@ class Runner(object):
             pin_memory=True,
             num_workers=4,
         )
+        test_set = self.Dataset(self.hyper, self.hyper.test)
+        test_loader = self.Loader(
+            test_set,
+            batch_size=self.hyper.batch_size_eval,
+            pin_memory=True,
+            num_workers=4,
+        )
         score = 0
         best_epoch = 0
         for epoch in range(self.hyper.epoch_num):
@@ -297,6 +304,8 @@ class Runner(object):
                     score = new_score
                     best_epoch = epoch
         print("best epoch: %d \t F1 = %f" % (best_epoch, score))
+        self.load_model(epoch=best_epoch)
+        self.evaluation(test_loader)
 
 
 if __name__ == "__main__":
