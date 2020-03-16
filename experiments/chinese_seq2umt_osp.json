@@ -19,7 +19,7 @@
     "hidden_size": 200,
     "threshold": 0.5,
     "order": ["object", "subject", "predicate"],
-    "activation": "tanh",
+    "activation": "gelu",
     "optimizer": "adam",
     "epoch_num":50,
     "batch_size_train": 256,

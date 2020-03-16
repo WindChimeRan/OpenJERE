@@ -27,6 +27,7 @@ class Hyper(object):
         self.max_decode_len: Optional[int]
         self.cell_name: str
         self.emb_size: int
+        self.char_emb_size: int
         self.rel_emb_size: int
         self.bio_emb_size: int
         self.hidden_size: int
