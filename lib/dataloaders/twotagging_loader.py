@@ -95,7 +95,9 @@ class Twotagging_Dataset(Abstract_dataset):
             if items:
                 self.text_list.append(self.hyper.tokenizer(instance["text"]))
                 self.spo_list.append(instance["spo_list"])
-                text_id = [self.word_vocab.get(c, self.word_vocab["oov"]) for c in text]
+                text_id = [
+                    self.word_vocab.get(c, self.word_vocab["<oov>"]) for c in text
+                ]
                 self.T.append(text_id)
                 s1, s2 = [0] * len(text), [0] * len(text)
                 for j in items:

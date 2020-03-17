@@ -50,7 +50,7 @@ class Copymb_Dataset(Abstract_dataset):
         return len(self.text_list)
 
     def text2tensor(self, text: List[str]) -> torch.tensor:
-        oov = self.word_vocab["oov"]
+        oov = self.word_vocab["<oov>"]
         padded_list = list(
             map(lambda x: self.word_vocab.get(x, oov), self.tokenizer(text))
         )

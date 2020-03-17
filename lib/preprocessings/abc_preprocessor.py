@@ -74,7 +74,9 @@ class ABC_data_preprocessing(ABC):
     # data
     # @abstractmethod
     def gen_vocab(
-        self, min_freq: int, init_result: Dict[str, int] = {"<pad>": 0, "<eos>": 1}
+        self,
+        min_freq: int,
+        init_result: Dict[str, int] = {"<pad>": 0, "<eos>": 1, "<|>": 2},
     ):
         # might contain sos, eos, pad ....
         source = os.path.join(self.raw_data_root, self.hyper.train)
@@ -92,7 +94,7 @@ class ABC_data_preprocessing(ABC):
             if v > min_freq:
                 result[k] = i
                 i += 1
-        result["oov"] = i
+        result["<oov>"] = i
         json.dump(result, open(target, "w", encoding="utf-8"), ensure_ascii=False)
 
     def spo_to_entities(self, text: str, spo_list: List[Dict[str, str]]) -> List[str]:

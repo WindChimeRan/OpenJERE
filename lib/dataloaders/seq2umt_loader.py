@@ -80,7 +80,7 @@ class Seq2umt_Dataset(Abstract_dataset):
             spo_list = instance["spo_list"]
 
             text_id = [
-                self.word_vocab.get(c, self.word_vocab["oov"])
+                self.word_vocab.get(c, self.word_vocab["<oov>"])
                 for c in self.hyper.tokenizer(text)
             ]
 

@@ -5,9 +5,10 @@ import os
 import numpy as np
 import random
 
-from collections import OrderedDict
 import pickle
 import datetime
+
+from collections import OrderedDict
 from tqdm import tqdm
 from recordclass import recordclass
 import math
@@ -18,6 +19,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import json
 
+from lib.config.const import *
 
 # enc_type = ['LSTM', 'GCN', 'LSTM-GCN'][0]
 # att_type = ['None', 'Unigram', 'N-Gram-Enc'][1]
@@ -25,11 +27,10 @@ def set_random_seeds(seed):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    if n_gpu > 1:
-        torch.cuda.manual_seed_all(seed)
+    torch.cuda.manual_seed_all(seed)
 
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 random_seed = 1234
 n_gpu = torch.cuda.device_count()
 set_random_seeds(random_seed)
@@ -74,8 +75,6 @@ Sample = recordclass("Sample", "Id SrcLen SrcWords TrgLen TrgWords AdjMat")
 # relations = get_relations(rel_file)
 
 
-
-
 class WordEmbeddings(nn.Module):
     def __init__(self, vocab_size, embed_dim, pre_trained_embed_matrix, drop_out_rate):
         super(WordEmbeddings, self).__init__()
@@ -103,6 +102,7 @@ class CharEmbeddings(nn.Module):
         char_embeds = self.dropout(char_embeds)
         return char_embeds
 
+
 class Encoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, layers, is_bidirectional, drop_out_rate):
         super(Encoder, self).__init__()
@@ -111,16 +111,23 @@ class Encoder(nn.Module):
         self.layers = layers
         self.is_bidirectional = is_bidirectional
         self.drop_rate = drop_out_rate
-        self.char_embeddings = CharEmbeddings(len(char_vocab), char_embed_dim, drop_rate)
-        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.layers, batch_first=True,
-                            bidirectional=self.is_bidirectional)
+        # self.char_embeddings = CharEmbeddings(len(char_vocab), char_embed_dim, drop_rate)
+        self.lstm = nn.LSTM(
+            self.input_dim,
+            self.hidden_dim,
+            self.layers,
+            batch_first=True,
+            bidirectional=self.is_bidirectional,
+        )
 
         self.dropout = nn.Dropout(self.drop_rate)
         self.conv1d = nn.Conv1d(char_embed_dim, char_feature_size, conv_filter_size)
-        self.max_pool = nn.MaxPool1d(max_word_len + conv_filter_size - 1, max_word_len + conv_filter_size - 1)
+        self.max_pool = nn.MaxPool1d(
+            max_word_len + conv_filter_size - 1, max_word_len + conv_filter_size - 1
+        )
 
     def forward(self, words_input, char_seq, adj, is_training=False):
-        char_embeds = self.char_embeddings(char_seq)
+        # char_embeds = self.char_embeddings(char_seq)
         char_embeds = char_embeds.permute(0, 2, 1)
 
         char_feature = torch.tanh(self.max_pool(self.conv1d(char_embeds)))
@@ -154,10 +161,11 @@ class Attention(nn.Module):
         wq = self.linear_query(s_prev)
         wquh = torch.tanh(wq + uh)
         attn_weights = self.v(wquh).squeeze()
-        attn_weights.data.masked_fill_(src_mask.data, -float('inf'))
+        attn_weights.data.masked_fill_(src_mask.data, -float("inf"))
         attn_weights = F.softmax(attn_weights, dim=-1)
         ctx = torch.bmm(attn_weights.unsqueeze(1), enc_hs).squeeze()
         return ctx, attn_weights
+
 
 class Decoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, layers, drop_out_rate, max_length):
@@ -172,16 +180,17 @@ class Decoder(nn.Module):
         self.lstm = nn.LSTMCell(2 * self.input_dim, self.hidden_dim, self.layers)
 
         self.dropout = nn.Dropout(self.drop_rate)
-        self.ent_out = nn.Linear(self.input_dim, len(word_vocab))
+        self.ent_out = nn.Linear(self.input_dim, len(self.word_vocab))
 
-    def forward(self, y_prev, h_prev, enc_hs, src_word_embeds, src_mask, is_training=False):
+    def forward(
+        self, y_prev, h_prev, enc_hs, src_word_embeds, src_mask, is_training=False
+    ):
         src_time_steps = enc_hs.size()[1]
 
         s_prev = h_prev[0]
         s_prev = s_prev.unsqueeze(1)
         s_prev = s_prev.repeat(1, src_time_steps, 1)
         ctx, attn_weights = self.attention(s_prev, enc_hs, src_mask)
-
 
         y_prev = y_prev.squeeze()
         s_cur = torch.cat((y_prev, ctx), 1)
@@ -191,14 +200,38 @@ class Decoder(nn.Module):
         return output, (hidden, cell_state), attn_weights
 
 
-class SeqToSeqModel(nn.Module):
-    def __init__(self):
-        super(SeqToSeqModel, self).__init__()
-        self.word_embeddings = WordEmbeddings(len(word_vocab), word_embed_dim, word_embed_matrix, drop_rate)
-        self.encoder = Encoder(enc_inp_size, int(enc_hidden_size/2), layers, True, drop_rate)
-        self.decoder = Decoder(dec_inp_size, dec_hidden_size, layers, drop_rate, max_trg_len)
+class WDec(nn.Module):
+    def __init__(self, hyper):
+        super(WDec, self).__init__()
+        self.hyper = hyper
+        self.order = hyper.order
+        self.data_root = hyper.data_root
+        self.gpu = hyper.gpu
 
-    def forward(self, src_words_seq, src_chars_seq, src_mask, trg_words_seq, trg_vocab_mask, adj, is_training=False):
+        self.word_vocab = json.load(
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding="utf-8")
+        )
+
+        self.word_embeddings = nn.Embedding(len(self.word_vocab), self.hyper.emb_size)
+
+        # self.word_embeddings = WordEmbeddings(len(word_vocab), word_embed_dim, word_embed_matrix, drop_rate)
+        self.encoder = Encoder(
+            enc_inp_size, int(enc_hidden_size / 2), layers, True, drop_rate
+        )
+        self.decoder = Decoder(
+            dec_inp_size, dec_hidden_size, layers, drop_rate, max_trg_len
+        )
+
+    def forward(
+        self,
+        src_words_seq,
+        src_chars_seq,
+        src_mask,
+        trg_words_seq,
+        trg_vocab_mask,
+        adj,
+        is_training=False,
+    ):
         src_word_embeds = self.word_embeddings(src_words_seq)
         trg_word_embeds = self.word_embeddings(trg_words_seq)
 
@@ -210,32 +243,42 @@ class SeqToSeqModel(nn.Module):
 
         encoder_output = self.encoder(src_word_embeds, src_chars_seq, adj, is_training)
 
-        h0 = autograd.Variable(torch.FloatTensor(torch.zeros(batch_len, word_embed_dim)))
+        h0 = torch.FloatTensor(torch.zeros(batch_len, word_embed_dim))
         h0 = h0.cuda()
-        c0 = autograd.Variable(torch.FloatTensor(torch.zeros(batch_len, word_embed_dim)))
+        c0 = torch.FloatTensor(torch.zeros(batch_len, word_embed_dim))
         c0 = c0.cuda()
         dec_hid = (h0, c0)
 
         if is_training:
             dec_inp = trg_word_embeds[:, 0, :]
-            dec_out, dec_hid, dec_attn = self.decoder(dec_inp, dec_hid, encoder_output, src_word_embeds,
-                                                      src_mask, is_training)
-            dec_out = dec_out.view(-1, len(word_vocab))
+            dec_out, dec_hid, dec_attn = self.decoder(
+                dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_training
+            )
+            dec_out = dec_out.view(-1, len(self.word_vocab))
             dec_out = F.log_softmax(dec_out, dim=-1)
             dec_out = dec_out.unsqueeze(1)
             for t in range(1, time_steps):
                 dec_inp = trg_word_embeds[:, t, :]
-                cur_dec_out, dec_hid, dec_attn = self.decoder(dec_inp, dec_hid, encoder_output, src_word_embeds,
-                                                              src_mask, is_training)
-                cur_dec_out = cur_dec_out.view(-1, len(word_vocab))
-                dec_out = torch.cat((dec_out, F.log_softmax(cur_dec_out, dim=-1).unsqueeze(1)), 1)
+                cur_dec_out, dec_hid, dec_attn = self.decoder(
+                    dec_inp,
+                    dec_hid,
+                    encoder_output,
+                    src_word_embeds,
+                    src_mask,
+                    is_training,
+                )
+                cur_dec_out = cur_dec_out.view(-1, len(self.word_vocab))
+                dec_out = torch.cat(
+                    (dec_out, F.log_softmax(cur_dec_out, dim=-1).unsqueeze(1)), 1
+                )
         else:
             dec_inp = trg_word_embeds[:, 0, :]
-            dec_out, dec_hid, dec_attn = self.decoder(dec_inp, dec_hid, encoder_output, src_word_embeds,
-                                                      src_mask, is_training)
-            dec_out = dec_out.view(-1, len(word_vocab))
+            dec_out, dec_hid, dec_attn = self.decoder(
+                dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_training
+            )
+            dec_out = dec_out.view(-1, len(self.word_vocab))
             if copy_on:
-                dec_out.data.masked_fill_(trg_vocab_mask.data, -float('inf'))
+                dec_out.data.masked_fill_(trg_vocab_mask.data, -float("inf"))
             dec_out = F.log_softmax(dec_out, dim=-1)
             topv, topi = dec_out.topk(1)
             dec_out_v, dec_out_i = dec_out.topk(1)
@@ -243,11 +286,17 @@ class SeqToSeqModel(nn.Module):
 
             for t in range(1, time_steps):
                 dec_inp = self.word_embeddings(topi.squeeze().detach())
-                cur_dec_out, dec_hid, cur_dec_attn = self.decoder(dec_inp, dec_hid, encoder_output, src_word_embeds,
-                                                                  src_mask, is_training)
-                cur_dec_out = cur_dec_out.view(-1, len(word_vocab))
+                cur_dec_out, dec_hid, cur_dec_attn = self.decoder(
+                    dec_inp,
+                    dec_hid,
+                    encoder_output,
+                    src_word_embeds,
+                    src_mask,
+                    is_training,
+                )
+                cur_dec_out = cur_dec_out.view(-1, len(self.word_vocab))
                 if copy_on:
-                    cur_dec_out.data.masked_fill_(trg_vocab_mask.data, -float('inf'))
+                    cur_dec_out.data.masked_fill_(trg_vocab_mask.data, -float("inf"))
                 cur_dec_out = F.log_softmax(cur_dec_out, dim=-1)
                 topv, topi = cur_dec_out.topk(1)
                 cur_dec_out_v, cur_dec_out_i = cur_dec_out.topk(1)
@@ -256,7 +305,7 @@ class SeqToSeqModel(nn.Module):
                 dec_attn_i = torch.cat((dec_attn_i, cur_dec_attn_i), 1)
 
         if is_training:
-            dec_out = dec_out.view(-1, len(word_vocab))
+            dec_out = dec_out.view(-1, len(self.word_vocab))
             return dec_out
         else:
             return dec_out_i, dec_attn_i

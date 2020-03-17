@@ -25,6 +25,8 @@ class Hyper(object):
         #                for copyre is per-sentence wise
         self.order: List[str]
         self.max_decode_len: Optional[int]
+        self.max_encode_len: Optional[int]
+
         self.cell_name: str
         self.emb_size: int
         self.char_emb_size: int

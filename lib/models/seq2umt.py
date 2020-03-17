@@ -81,7 +81,7 @@ class Seq2umt(ABCModel):
         self.encoder = Encoder(
             len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
         )
-        self.decoder = Decoder(hyper)
+        self.decoder = Decoder(hyper, self.word_vocab)
         self.sos = nn.Embedding(num_embeddings=1, embedding_dim=self.hyper.emb_size)
 
     # def masked_BCEloss(self, logits, gt, mask):
@@ -230,16 +230,17 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, hyper):
+    def __init__(self, hyper, word_vocab):
         super(Decoder, self).__init__()
         self.hyper = hyper
         self.data_root = hyper.data_root
         self.gpu = hyper.gpu
         self.word_emb_size = self.hyper.emb_size
         self.hidden_size = self.hyper.hidden_size
-        self.word_vocab = json.load(
-            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding="utf-8")
-        )
+        # self.word_vocab = json.load(
+        #     open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding="utf-8")
+        # )
+        self.word_vocab = word_vocab
         self.relation_vocab = json.load(
             open(
                 os.path.join(self.data_root, "relation_vocab.json"),
