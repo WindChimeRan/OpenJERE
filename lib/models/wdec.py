@@ -168,7 +168,9 @@ class Attention(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layers, drop_out_rate, max_length):
+    def __init__(
+        self, input_dim, hidden_dim, layers, drop_out_rate, max_length, vocab_length
+    ):
         super(Decoder, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -180,7 +182,7 @@ class Decoder(nn.Module):
         self.lstm = nn.LSTMCell(2 * self.input_dim, self.hidden_dim, self.layers)
 
         self.dropout = nn.Dropout(self.drop_rate)
-        self.ent_out = nn.Linear(self.input_dim, len(self.word_vocab))
+        self.ent_out = nn.Linear(self.input_dim, vocab_length)
 
     def forward(
         self, y_prev, h_prev, enc_hs, src_word_embeds, src_mask, is_training=False
@@ -211,7 +213,19 @@ class WDec(nn.Module):
         self.word_vocab = json.load(
             open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding="utf-8")
         )
-
+        self.relation_vocab = json.load(
+            open(
+                os.path.join(self.data_root, "relation_vocab.json"),
+                "r",
+                encoding="utf-8",
+            )
+        )
+        self.word_vocab.update(
+            {
+                k: v + max(self.word_vocab.values())
+                for k, v in self.relation_vocab.items()
+            }
+        )
         self.word_embeddings = nn.Embedding(len(self.word_vocab), self.hyper.emb_size)
 
         # self.word_embeddings = WordEmbeddings(len(word_vocab), word_embed_dim, word_embed_matrix, drop_rate)
@@ -219,7 +233,12 @@ class WDec(nn.Module):
             enc_inp_size, int(enc_hidden_size / 2), layers, True, drop_rate
         )
         self.decoder = Decoder(
-            dec_inp_size, dec_hidden_size, layers, drop_rate, max_trg_len
+            dec_inp_size,
+            dec_hidden_size,
+            layers,
+            drop_rate,
+            max_trg_len,
+            len(self.word_vocab),
         )
 
     def forward(

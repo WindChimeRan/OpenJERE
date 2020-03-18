@@ -16,154 +16,19 @@ import random
 Sample = recordclass("Sample", "Id SrcLen SrcWords TrgLen TrgWords AdjMat")
 
 
-# def get_max_len(sample_batch):
-#     src_max_len = len(sample_batch[0].SrcWords)
-#     for idx in range(1, len(sample_batch)):
-#         if len(sample_batch[idx].SrcWords) > src_max_len:
-#             src_max_len = len(sample_batch[idx].SrcWords)
-
-#     trg_max_len = len(sample_batch[0].TrgWords)
-#     for idx in range(1, len(sample_batch)):
-#         if len(sample_batch[idx].TrgWords) > trg_max_len:
-#             trg_max_len = len(sample_batch[idx].TrgWords)
-
-#     return src_max_len, trg_max_len
-
-
-# def get_words_index_seq(words, max_len):
-#     seq = list()
-#     for word in words:
-#         if word in word_vocab:
-#             seq.append(word_vocab[word])
-#         else:
-#             seq.append(word_vocab["<UNK>"])
-#     pad_len = max_len - len(words)
-#     for i in range(0, pad_len):
-#         seq.append(word_vocab["<PAD>"])
-#     return seq
-
-
-# def get_target_words_index_seq(words, max_len):
-#     seq = list()
-#     for word in words:
-#         if word in word_vocab:
-#             seq.append(word_vocab[word])
-#         else:
-#             seq.append(word_vocab["<UNK>"])
-#     pad_len = max_len - len(words)
-#     for i in range(0, pad_len):
-#         seq.append(word_vocab["<EOS>"])
-#     return seq
-
-
-# def get_padded_mask(cur_len, max_len):
-#     mask_seq = list()
-#     for i in range(0, cur_len):
-#         mask_seq.append(0)
-#     pad_len = max_len - cur_len
-#     for i in range(0, pad_len):
-#         mask_seq.append(1)
-#     return mask_seq
-
-
-# def get_rel_mask(trg_words, max_len):
-#     mask_seq = list()
-#     for word in trg_words:
-#         mask_seq.append(0)
-#         # if word in relations:
-#         #     mask_seq.append(0)
-#         # else:
-#         #     mask_seq.append(1)
-#     pad_len = max_len - len(trg_words)
-#     for i in range(0, pad_len):
-#         mask_seq.append(1)
-#     return mask_seq
-
-
-# def get_char_seq(words, max_len):
-#     char_seq = list()
-#     for i in range(0, conv_filter_size - 1):
-#         char_seq.append(char_vocab['<PAD>'])
-#     for word in words:
-#         for c in word[0:min(len(word), max_word_len)]:
-#             if c in char_vocab:
-#                 char_seq.append(char_vocab[c])
-#             else:
-#                 char_seq.append(char_vocab['<UNK>'])
-#         pad_len = max_word_len - len(word)
-#         for i in range(0, pad_len):
-#             char_seq.append(char_vocab['<PAD>'])
-#         for i in range(0, conv_filter_size - 1):
-#             char_seq.append(char_vocab['<PAD>'])
-
-#     pad_len = max_len - len(words)
-#     for i in range(0, pad_len):
-#         for i in range(0, max_word_len + conv_filter_size - 1):
-#             char_seq.append(char_vocab['<PAD>'])
-#     return char_seq
-
-
-def get_target_vocab_mask(src_words):
+def get_target_vocab_mask(src_words, word_vocab):
     mask = []
     for i in range(0, len(word_vocab)):
         mask.append(1)
     for word in src_words:
         if word in word_vocab:
             mask[word_vocab[word]] = 0
-    for rel in relations:
-        mask[word_vocab[rel]] = 0
 
-    mask[word_vocab["<UNK>"]] = 0
-    mask[word_vocab["<EOS>"]] = 0
-    mask[word_vocab[";"]] = 0
-    mask[word_vocab["|"]] = 0
+    mask[word_vocab["<oov>"]] = 0
+    mask[word_vocab["<eos>"]] = 0
+    mask[word_vocab["<;>"]] = 0
+    mask[word_vocab["<|>"]] = 0
     return mask
-
-
-def get_batch_data(cur_samples, is_training=False):
-    """
-    Returns the training samples and labels as numpy array
-    """
-    batch_src_max_len, batch_trg_max_len = get_max_len(cur_samples)
-    src_words_list = list()
-    src_words_mask_list = list()
-    src_char_seq = list()
-
-    trg_words_list = list()
-    trg_vocab_mask = list()
-    adj_lst = []
-
-    target = list()
-    cnt = 0
-    for sample in cur_samples:
-        src_words_list.append(get_words_index_seq(sample.SrcWords, batch_src_max_len))
-        src_words_mask_list.append(get_padded_mask(sample.SrcLen, batch_src_max_len))
-        src_char_seq.append(get_char_seq(sample.SrcWords, batch_src_max_len))
-        trg_vocab_mask.append(get_target_vocab_mask(sample.SrcWords))
-
-        cur_masked_adj = np.zeros(
-            (batch_src_max_len, batch_src_max_len), dtype=np.float32
-        )
-        cur_masked_adj[: len(sample.SrcWords), : len(sample.SrcWords)] = sample.AdjMat
-        adj_lst.append(cur_masked_adj)
-
-        if is_training:
-            padded_trg_words = get_words_index_seq(sample.TrgWords, batch_trg_max_len)
-            trg_words_list.append(padded_trg_words)
-            target.append(padded_trg_words[1:])
-        else:
-            trg_words_list.append(get_words_index_seq(["<SOS>"], 1))
-        cnt += 1
-
-    return {
-        "src_words": np.array(src_words_list, dtype=np.float32),
-        "src_chars": np.array(src_char_seq),
-        "src_words_mask": np.array(src_words_mask_list),
-        "adj": np.array(adj_lst),
-        "trg_vocab_mask": np.array(trg_vocab_mask),
-        "trg_words": np.array(trg_words_list, dtype=np.int32),
-        "target": np.array(target),
-    }
 
 
 class WDec_Dataset(Abstract_dataset):
@@ -192,8 +57,8 @@ class WDec_Dataset(Abstract_dataset):
         tokens_id = self.text2id(text)
         seq_id = self.seq2id(seq)
 
-        # TODO: mask trg words
-        trg_vocab_mask = None
+        # TODO: check
+        trg_vocab_mask = get_target_vocab_mask(text)
 
         return tokens_id, seq_id, len(tokens_id), len(seq_id), spo, text
 

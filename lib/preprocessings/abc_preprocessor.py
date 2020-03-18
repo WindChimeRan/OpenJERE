@@ -76,7 +76,7 @@ class ABC_data_preprocessing(ABC):
     def gen_vocab(
         self,
         min_freq: int,
-        init_result: Dict[str, int] = {"<pad>": 0, "<eos>": 1, "<|>": 2},
+        init_result: Dict[str, int] = {"<pad>": 0, "<eos>": 1, "<|>": 2, "<;>": 3},
     ):
         # might contain sos, eos, pad ....
         source = os.path.join(self.raw_data_root, self.hyper.train)
