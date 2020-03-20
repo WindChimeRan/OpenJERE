@@ -180,9 +180,7 @@ class Runner(object):
 
                 for batch_idx, sample in pbar:
 
-                    print(sample.text)
-                    print(sample.R_gt)
-                    print(sample.R_in)
+                    print(sample.__dict__)
                     exit()
 
         else:
