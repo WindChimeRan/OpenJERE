@@ -1,7 +1,7 @@
 {
     "dataset": "nyt",
-    "model": "seq2umt",
-    "data_root": "data/nyt/seq2umt_ops",
+    "model": "wdec",
+    "data_root": "data/nyt/wdec",
     "raw_data_root": "raw_data/nyt",
     "train": "new_train_data.json",
     "dev": "new_validate_data.json",

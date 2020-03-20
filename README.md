@@ -57,6 +57,12 @@ python main.py --mode train --exp nyt_seq2umt_ops
 python main.py --mode evaluation --exp nyt_seq2umt_ops
 ```
 
+```shell
+python main.py --mode preprocessing --exp nyt_wdec
+python main.py --mode train --exp nyt_wdec
+python main.py --mode evaluation --exp nyt_wdec
+```
+
 ## EWebNLG
 
 [code](https://github.com/zhijing-jin/WebNLG_Reader)

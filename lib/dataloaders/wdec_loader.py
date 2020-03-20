@@ -13,6 +13,8 @@ import os
 import json
 import random
 
+import torch
+
 Sample = recordclass("Sample", "Id SrcLen SrcWords TrgLen TrgWords AdjMat")
 
 

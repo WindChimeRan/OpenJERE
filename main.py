@@ -21,6 +21,7 @@ from lib.preprocessings import (
     Copymb_preprocessing,
     Twotagging_preprocessing,
     Seq2umt_preprocessing,
+    WDec_preprocessing,
 )
 
 from lib.dataloaders import (
@@ -32,6 +33,8 @@ from lib.dataloaders import (
     Twotagging_loader,
     Seq2umt_Dataset,
     Seq2umt_loader,
+    WDec_Dataset,
+    WDec_loader,
 )
 from lib.metrics import F1_triplet
 from lib.models import MultiHeadSelection, CopyMB, Twotagging, Seq2umt, Threetagging
@@ -72,29 +75,29 @@ class Runner(object):
 
     def _init_loader(self, name: str):
 
-        if name == "selection":
+        dataset_dic = {
+            "selection": Selection_Dataset,
+            "copymb": Copymb_Dataset,
+            "twotagging": Twotagging_Dataset,
+            "seq2umt": Seq2umt_Dataset,
+            "wdec": WDec_Dataset,
+        }
 
-            Dataset = Selection_Dataset
-            Loader = Selection_loader
-        elif name == "copymb":
+        loader_dic = {
+            "selection": Selection_loader,
+            "copymb": Copymb_loader,
+            "twotagging": Twotagging_loader,
+            "seq2umt": Seq2umt_loader,
+            "wdec": WDec_loader,
+        }
 
-            Dataset = Copymb_Dataset
-            Loader = Copymb_loader
-        elif name == "twotagging":
+        Dataset = dataset_dic[name]
+        Loader = loader_dic[name]
 
-            Dataset = Twotagging_Dataset
-            Loader = Twotagging_loader
-        elif name == "seq2umt":
-
-            Dataset = Seq2umt_Dataset
-            Loader = Seq2umt_loader
-
-        elif name == "threetagging":
-            Dataset = Seq2umt_Dataset
-            Loader = Seq2umt_loader
-        else:
+        if name not in dataset_dic or name not in loader_dic:
             raise ValueError("wrong name!")
-        return Dataset, Loader
+        else:
+            return Dataset, Loader
 
     def _optimizer(self, name, model):
         m = {"adam": Adam(model.parameters()), "sgd": SGD(model.parameters(), lr=0.5)}
@@ -107,6 +110,7 @@ class Runner(object):
             "twotagging": Twotagging_preprocessing(self.hyper),
             "seq2umt": Seq2umt_preprocessing(self.hyper),
             "threetagging": Seq2umt_preprocessing(self.hyper),
+            "wdec": WDec_preprocessing(self.hyper),
         }
         return p[name]
 

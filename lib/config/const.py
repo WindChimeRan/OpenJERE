@@ -1,3 +1,10 @@
+OOV = "<oov>"
+EOS = "<eos>"
+SEP_SEMICOLON = "<;>"
+SEP_VERTICAL_BAR = "<|>"
+NO_RELATION = "N"
+
+
 def get_now_time():
     a = time.time()
     return time.ctime(a)
