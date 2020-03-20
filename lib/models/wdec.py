@@ -220,12 +220,6 @@ class WDec(nn.Module):
                 encoding="utf-8",
             )
         )
-        self.word_vocab.update(
-            {
-                k: v + max(self.word_vocab.values())
-                for k, v in self.relation_vocab.items()
-            }
-        )
         self.word_embeddings = nn.Embedding(len(self.word_vocab), self.hyper.emb_size)
 
         # self.word_embeddings = WordEmbeddings(len(word_vocab), word_embed_dim, word_embed_matrix, drop_rate)

@@ -1,3 +1,6 @@
+import time
+
+PAD = "<pad>"
 OOV = "<oov>"
 EOS = "<eos>"
 SEP_SEMICOLON = "<;>"

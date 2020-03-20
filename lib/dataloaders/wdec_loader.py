@@ -5,7 +5,7 @@ from functools import partial
 from typing import Dict, List, Tuple, Set, Optional
 
 from .abc_dataset import Abstract_dataset
-from lib.config.const import seq_padding
+from lib.config.const import seq_padding, OOV, EOS, SEP_SEMICOLON, SEP_VERTICAL_BAR
 
 
 import numpy as np
@@ -26,10 +26,10 @@ def get_target_vocab_mask(src_words, word_vocab):
         if word in word_vocab:
             mask[word_vocab[word]] = 0
 
-    mask[word_vocab["<oov>"]] = 0
-    mask[word_vocab["<eos>"]] = 0
-    mask[word_vocab["<;>"]] = 0
-    mask[word_vocab["<|>"]] = 0
+    mask[word_vocab[OOV]] = 0
+    mask[word_vocab[EOS]] = 0
+    mask[word_vocab[SEP_SEMICOLON]] = 0
+    mask[word_vocab[SEP_VERTICAL_BAR]] = 0
     return mask
 
 
@@ -68,22 +68,22 @@ class WDec_Dataset(Abstract_dataset):
         return len(self.text_list)
 
     def text2id(self, text: List[str]) -> torch.tensor:
-        oov = self.word_vocab["<oov>"]
+        oov = self.word_vocab[OOV]
         text_list = list(
             map(lambda x: self.word_vocab.get(x, oov), self.tokenizer(text))
         )
         return text_list
 
     def seq2id(self, seq):
-        oov = self.word_vocab["<oov>"]
-        tuples = seq.strip().split("<|>")
+        oov = self.word_vocab[OOV]
+        tuples = seq.strip().split(SEP_VERTICAL_BAR)
         random.shuffle(tuples)
-        new_trg_line = " <|> ".join(tuples)
+        new_trg_line = (" " + SEP_VERTICAL_BAR + " ").join(tuples)
         assert len(seq.split()) == len(new_trg_line.split())
         trg_line = new_trg_line
 
         trg_words = trg_line.split()
-        trg_words.append("<EOS>")
+        trg_words.append(EOS)
         trg_words = list(map(lambda x: self.word_vocab.get(x, oov), trg_words))
         return trg_words
 

@@ -10,10 +10,32 @@ from cached_property import cached_property
 from overrides import overrides
 
 from lib.preprocessings.abc_preprocessor import ABC_data_preprocessing
-from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS
+from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS, PAD
 
 
 class WDec_preprocessing(ABC_data_preprocessing):
+    @overrides
+    def gen_vocab(self, min_freq: int):
+        super(WDec_preprocessing, self).gen_vocab(
+            min_freq,
+            init_result={PAD: 0, EOS: 1, SEP_VERTICAL_BAR: 2, SEP_SEMICOLON: 3,},
+        )
+        target = os.path.join(self.data_root, "word_vocab.json")
+        word_vocab = json.load(
+            open(os.path.join(self.data_root, "word_vocab.json"), "r", encoding="utf-8")
+        )
+        relation_vocab = json.load(
+            open(
+                os.path.join(self.data_root, "relation_vocab.json"),
+                "r",
+                encoding="utf-8",
+            )
+        )
+        word_vocab.update(
+            {k: v + max(word_vocab.values()) for k, v in relation_vocab.items()}
+        )
+        json.dump(word_vocab, open(target, "w", encoding="utf-8"), ensure_ascii=False)
+
     @overrides
     def _read_line(self, line: str) -> Optional[str]:
         line = line.strip("\n")

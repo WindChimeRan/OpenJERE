@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple, Set, Optional
 from abc import ABC, abstractmethod
 
 from cached_property import cached_property
+from lib.config.const import PAD, OOV, EOS, SEP_SEMICOLON, SEP_VERTICAL_BAR
 
 
 class ABC_data_preprocessing(ABC):
@@ -58,25 +59,18 @@ class ABC_data_preprocessing(ABC):
 
     # model
     def gen_bio_vocab(self):
-        result = {"<pad>": 3, "B": 0, "I": 1, "O": 2}
+        result = {PAD: 3, "B": 0, "I": 1, "O": 2}
         json.dump(result, open(os.path.join(self.data_root, "bio_vocab.json"), "w"))
 
-    # # data
-    # @abstractmethod
-    # def gen_relation_vocab(self):
-    #     pass
-
-    # # data
-    # @abstractmethod
-    # def yield_text(self, source: str) -> List[str]:
-    #     pass
-
-    # data
-    # @abstractmethod
     def gen_vocab(
         self,
         min_freq: int,
-        init_result: Dict[str, int] = {"<pad>": 0, "<eos>": 1, "<|>": 2, "<;>": 3},
+        init_result: Dict[str, int] = {
+            PAD: 0,
+            EOS: 1,
+            SEP_VERTICAL_BAR: 2,
+            SEP_SEMICOLON: 3,
+        },
     ):
         # might contain sos, eos, pad ....
         source = os.path.join(self.raw_data_root, self.hyper.train)
@@ -94,7 +88,7 @@ class ABC_data_preprocessing(ABC):
             if v > min_freq:
                 result[k] = i
                 i += 1
-        result["<oov>"] = i
+        result[OOV] = i
         json.dump(result, open(target, "w", encoding="utf-8"), ensure_ascii=False)
 
     def spo_to_entities(self, text: str, spo_list: List[Dict[str, str]]) -> List[str]:
