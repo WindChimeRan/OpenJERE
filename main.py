@@ -37,7 +37,14 @@ from lib.dataloaders import (
     WDec_loader,
 )
 from lib.metrics import F1_triplet
-from lib.models import MultiHeadSelection, CopyMB, Twotagging, Seq2umt, Threetagging
+from lib.models import (
+    MultiHeadSelection,
+    CopyMB,
+    Twotagging,
+    Seq2umt,
+    Threetagging,
+    WDec,
+)
 from lib.config import Hyper
 
 parser = argparse.ArgumentParser()
@@ -126,6 +133,8 @@ class Runner(object):
             self.model = Seq2umt(self.hyper).cuda(self.gpu)
         elif self.hyper.model == "threetagging":
             self.model = Threetagging(self.hyper).cuda(self.gpu)
+        elif self.hyper.model == "wdec":
+            self.model = WDec(self.hyper).cuda(self.gpu)
         else:
             raise NotImplementedError("Future works!")
 
@@ -294,6 +303,8 @@ class Runner(object):
                 output = self.model(sample, is_train=True)
 
                 loss = output["loss"]
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 10.0)
+
                 loss.backward()
                 self.optimizer.step()
 

@@ -57,11 +57,19 @@ class WDec_Dataset(Abstract_dataset):
         spo = self.spo_list[index]
 
         tokens_id = self.text2id(text)
-        seq_id = self.seq2id(seq)
+        trg_words = self.seq2id(seq)
 
         trg_vocab_mask = get_target_vocab_mask(text, self.word_vocab)
 
-        return tokens_id, seq_id, len(tokens_id), len(seq_id), trg_vocab_mask, spo, text
+        return (
+            tokens_id,
+            trg_words,
+            len(tokens_id),
+            len(trg_words),
+            trg_vocab_mask,
+            spo,
+            text,
+        )
 
     def __len__(self):
         return len(self.text_list)
@@ -94,7 +102,7 @@ class Batch_reader(object):
         self.seq_id = torch.tensor(seq_padding(transposed_data[1]))
 
         self.src_words_mask = torch.gt(self.tokens_id, 0)
-        self.seq_words_mask = torch.gt(self.seq_id, 0)
+        # self.seq_words_mask = torch.gt(self.seq_id, 0)
 
         self.en_len = transposed_data[2]
         self.de_len = transposed_data[3]
@@ -106,7 +114,7 @@ class Batch_reader(object):
         self.tokens_id = self.tokens_id.pin_memory()
         self.seq_id = self.seq_id.pin_memory()
         self.src_words_mask = self.src_words_mask.pin_memory()
-        self.seq_words_mask = self.seq_words_mask.pin_memory()
+        # self.seq_words_mask = self.seq_words_mask.pin_memory()
         self.trg_vocab_mask = self.trg_vocab_mask.pin_memory()
         return self
 

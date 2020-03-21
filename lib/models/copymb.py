@@ -110,14 +110,16 @@ class CopyMB(ABCModel):
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
         tokens = sample.tokens_id.cuda(self.gpu)
-        seq_gold = sample.seq_id.cuda(self.gpu)
-        bio_gold = sample.bio_id.cuda(self.gpu)
-        length = sample.length
 
+        length = sample.length
         B = len(length)
 
+        if is_train:
+            seq_gold = sample.seq_id.cuda(self.gpu)
+            bio_gold = sample.bio_id.cuda(self.gpu)
+
         text_list = sample.text
-        spo_gold = sample.spo_gold
+        # spo_gold = sample.spo_gold
 
         mask = tokens != self.word_vocab["<pad>"]  # batch x seq
 
@@ -240,6 +242,7 @@ class CopyMB(ABCModel):
         output["description"] = partial(self.description, output=output)
 
         if not is_train:
+            spo_gold = sample.spo_gold
             output["spo_gold"] = spo_gold
             decoder_result = self.decodeid2triplet(
                 decoder_result, tokens, bio_gold.tolist(), mask

@@ -11,6 +11,13 @@ import datetime
 from collections import OrderedDict
 from tqdm import tqdm
 from recordclass import recordclass
+from typing import Dict, List, Tuple, Set, Optional
+from functools import partial
+
+from lib.metrics import F1_triplet
+from lib.models.abc_model import ABCModel
+from lib.config.const import *
+
 import math
 import torch
 import torch.autograd as autograd
@@ -19,7 +26,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 import json
 
-from lib.config.const import *
 
 # enc_type = ['LSTM', 'GCN', 'LSTM-GCN'][0]
 # att_type = ['None', 'Unigram', 'N-Gram-Enc'][1]
@@ -128,12 +134,13 @@ class Encoder(nn.Module):
 
     def forward(self, words_input, char_seq, adj, is_training=False):
         # char_embeds = self.char_embeddings(char_seq)
-        char_embeds = char_embeds.permute(0, 2, 1)
+        # char_embeds = char_embeds.permute(0, 2, 1)
 
-        char_feature = torch.tanh(self.max_pool(self.conv1d(char_embeds)))
-        char_feature = char_feature.permute(0, 2, 1)
+        # char_feature = torch.tanh(self.max_pool(self.conv1d(char_embeds)))
+        # char_feature = char_feature.permute(0, 2, 1)
 
-        words_input = torch.cat((words_input, char_feature), -1)
+        # words_input = torch.cat((words_input, char_feature), -1)
+        words_input = words_input
         outputs, hc = self.lstm(words_input)
         outputs = self.dropout(outputs)
 
@@ -202,7 +209,7 @@ class Decoder(nn.Module):
         return output, (hidden, cell_state), attn_weights
 
 
-class WDec(nn.Module):
+class WDec(ABCModel):
     def __init__(self, hyper):
         super(WDec, self).__init__()
         self.hyper = hyper
@@ -234,27 +241,30 @@ class WDec(nn.Module):
             max_trg_len,
             len(self.word_vocab),
         )
+        self.criterion = nn.NLLLoss(ignore_index=0)
+        self.metrics = F1_triplet()
+        self.get_metric = self.metrics.get_metric
 
-    def forward(
-        self,
-        src_words_seq,
-        src_chars_seq,
-        src_mask,
-        trg_words_seq,
-        trg_vocab_mask,
-        adj,
-        is_training=False,
-    ):
+    def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
+
+        src_words_seq = sample.tokens_id.cuda(self.gpu)
+        # src_chars_seq = sample.src_chars_seq
+        src_mask = sample.src_words_mask.cuda(self.gpu)
+        trg_vocab_mask = sample.trg_vocab_mask.cuda(self.gpu)
+
+        if is_train:
+            trg_words_seq = sample.seq_id.cuda(self.gpu)
+            trg_word_embeds = self.word_embeddings(trg_words_seq)
+
         src_word_embeds = self.word_embeddings(src_words_seq)
-        trg_word_embeds = self.word_embeddings(trg_words_seq)
 
         batch_len = src_word_embeds.size()[0]
-        if is_training:
+        if is_train:
             time_steps = trg_word_embeds.size()[1] - 1
         else:
             time_steps = max_trg_len
 
-        encoder_output = self.encoder(src_word_embeds, src_chars_seq, adj, is_training)
+        encoder_output = self.encoder(src_word_embeds, None, None, is_train)
 
         h0 = torch.FloatTensor(torch.zeros(batch_len, word_embed_dim))
         h0 = h0.cuda()
@@ -262,10 +272,12 @@ class WDec(nn.Module):
         c0 = c0.cuda()
         dec_hid = (h0, c0)
 
-        if is_training:
+        output = {}
+
+        if is_train:
             dec_inp = trg_word_embeds[:, 0, :]
             dec_out, dec_hid, dec_attn = self.decoder(
-                dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_training
+                dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_train
             )
             dec_out = dec_out.view(-1, len(self.word_vocab))
             dec_out = F.log_softmax(dec_out, dim=-1)
@@ -278,16 +290,17 @@ class WDec(nn.Module):
                     encoder_output,
                     src_word_embeds,
                     src_mask,
-                    is_training,
+                    is_train,
                 )
                 cur_dec_out = cur_dec_out.view(-1, len(self.word_vocab))
                 dec_out = torch.cat(
                     (dec_out, F.log_softmax(cur_dec_out, dim=-1).unsqueeze(1)), 1
                 )
         else:
+            # TODO
             dec_inp = trg_word_embeds[:, 0, :]
             dec_out, dec_hid, dec_attn = self.decoder(
-                dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_training
+                dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_train
             )
             dec_out = dec_out.view(-1, len(self.word_vocab))
             if copy_on:
@@ -305,7 +318,7 @@ class WDec(nn.Module):
                     encoder_output,
                     src_word_embeds,
                     src_mask,
-                    is_training,
+                    is_train,
                 )
                 cur_dec_out = cur_dec_out.view(-1, len(self.word_vocab))
                 if copy_on:
@@ -317,8 +330,26 @@ class WDec(nn.Module):
                 cur_dec_attn_v, cur_dec_attn_i = cur_dec_attn.topk(1)
                 dec_attn_i = torch.cat((dec_attn_i, cur_dec_attn_i), 1)
 
-        if is_training:
+        if is_train:
+            print(dec_out.size())
+            print(trg_words_seq.size())
             dec_out = dec_out.view(-1, len(self.word_vocab))
-            return dec_out
+            target = trg_words_seq.view(-1, 1).squeeze()
+            loss = self.criterion(dec_out, target)
+
+            output["loss"] = loss
+
+            output["description"] = partial(self.description, output=output)
+
+            return output
         else:
             return dec_out_i, dec_attn_i
+
+    @staticmethod
+    def description(epoch, epoch_num, output):
+        return "L: {:.2f}, epoch: {}/{}:".format(
+            output["loss"].item(), epoch, epoch_num,
+        )
+
+    def run_metrics(self, output):
+        self.metrics(output["decode_result"], output["spo_gold"])
