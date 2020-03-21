@@ -5,7 +5,7 @@ from functools import partial
 from typing import Dict, List, Tuple, Set, Optional
 
 from .abc_dataset import Abstract_dataset
-from lib.config.const import seq_padding, OOV, EOS, SEP_SEMICOLON, SEP_VERTICAL_BAR
+from lib.config.const import seq_padding, OOV, SOS, EOS, SEP_SEMICOLON, SEP_VERTICAL_BAR
 
 
 import numpy as np
@@ -31,6 +31,20 @@ def get_target_vocab_mask(src_words, word_vocab):
     mask[word_vocab[SEP_SEMICOLON]] = 0
     mask[word_vocab[SEP_VERTICAL_BAR]] = 0
     return mask
+
+
+def get_max_len(sample_batch):
+    src_max_len = len(sample_batch[0].SrcWords)
+    for idx in range(1, len(sample_batch)):
+        if len(sample_batch[idx].SrcWords) > src_max_len:
+            src_max_len = len(sample_batch[idx].SrcWords)
+
+    trg_max_len = len(sample_batch[0].TrgWords)
+    for idx in range(1, len(sample_batch)):
+        if len(sample_batch[idx].TrgWords) > trg_max_len:
+            trg_max_len = len(sample_batch[idx].TrgWords)
+
+    return src_max_len, trg_max_len
 
 
 class WDec_Dataset(Abstract_dataset):
@@ -90,7 +104,7 @@ class WDec_Dataset(Abstract_dataset):
         trg_line = new_trg_line
 
         trg_words = trg_line.split()
-        trg_words.append(EOS)
+        trg_words = [SOS] + trg_words + [EOS]
         trg_words = list(map(lambda x: self.word_vocab.get(x, oov), trg_words))
         return trg_words
 
@@ -99,8 +113,10 @@ class Batch_reader(object):
     def __init__(self, data):
         transposed_data = list(zip(*data))
         self.tokens_id = torch.tensor(seq_padding(transposed_data[0]))
-        self.seq_id = torch.tensor(seq_padding(transposed_data[1]))
 
+        # TODO
+        self.trg_words = torch.tensor(seq_padding(transposed_data[1]))
+        self.target = torch.tensor(seq_padding([ins[1:] for ins in transposed_data[1]]))
         self.src_words_mask = torch.gt(self.tokens_id, 0)
         # self.seq_words_mask = torch.gt(self.seq_id, 0)
 
@@ -112,7 +128,8 @@ class Batch_reader(object):
 
     def pin_memory(self):
         self.tokens_id = self.tokens_id.pin_memory()
-        self.seq_id = self.seq_id.pin_memory()
+        self.trg_words = self.trg_words.pin_memory()
+        self.target = self.target.pin_memory()
         self.src_words_mask = self.src_words_mask.pin_memory()
         # self.seq_words_mask = self.seq_words_mask.pin_memory()
         self.trg_vocab_mask = self.trg_vocab_mask.pin_memory()

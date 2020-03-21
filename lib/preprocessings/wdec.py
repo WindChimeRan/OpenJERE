@@ -10,7 +10,7 @@ from cached_property import cached_property
 from overrides import overrides
 
 from lib.preprocessings.abc_preprocessor import ABC_data_preprocessing
-from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS, PAD
+from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS, PAD, SOS
 
 
 class WDec_preprocessing(ABC_data_preprocessing):
@@ -18,7 +18,13 @@ class WDec_preprocessing(ABC_data_preprocessing):
     def gen_vocab(self, min_freq: int):
         super(WDec_preprocessing, self).gen_vocab(
             min_freq,
-            init_result={PAD: 0, EOS: 1, SEP_VERTICAL_BAR: 2, SEP_SEMICOLON: 3,},
+            init_result={
+                PAD: 0,
+                SOS: 1,
+                EOS: 2,
+                SEP_VERTICAL_BAR: 3,
+                SEP_SEMICOLON: 4,
+            },
         )
         target = os.path.join(self.data_root, "word_vocab.json")
         word_vocab = json.load(

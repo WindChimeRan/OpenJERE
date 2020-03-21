@@ -253,7 +253,9 @@ class WDec(ABCModel):
         trg_vocab_mask = sample.trg_vocab_mask.cuda(self.gpu)
 
         if is_train:
-            trg_words_seq = sample.seq_id.cuda(self.gpu)
+            trg_words_seq = sample.trg_words.cuda(self.gpu)
+            target = sample.target.cuda(self.gpu)
+
             trg_word_embeds = self.word_embeddings(trg_words_seq)
 
         src_word_embeds = self.word_embeddings(src_words_seq)
@@ -331,10 +333,8 @@ class WDec(ABCModel):
                 dec_attn_i = torch.cat((dec_attn_i, cur_dec_attn_i), 1)
 
         if is_train:
-            print(dec_out.size())
-            print(trg_words_seq.size())
             dec_out = dec_out.view(-1, len(self.word_vocab))
-            target = trg_words_seq.view(-1, 1).squeeze()
+            target = target.view(-1, 1).squeeze()
             loss = self.criterion(dec_out, target)
 
             output["loss"] = loss
