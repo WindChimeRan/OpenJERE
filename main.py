@@ -303,22 +303,22 @@ class Runner(object):
                 output = self.model(sample, is_train=True)
 
                 loss = output["loss"]
+                loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 10.0)
 
-                loss.backward()
                 self.optimizer.step()
 
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
 
             self.save_model(epoch)
-            if epoch % self.hyper.print_epoch == 0 and epoch >= 2:
-                new_score = self.evaluation(dev_loader)
-                if new_score >= score:
-                    score = new_score
-                    best_epoch = epoch
-        print("best epoch: %d \t F1 = %f" % (best_epoch, score))
-        self.load_model(epoch=best_epoch)
-        self.evaluation(test_loader)
+        #     if epoch % self.hyper.print_epoch == 0 and epoch >= 2:
+        #         new_score = self.evaluation(dev_loader)
+        #         if new_score >= score:
+        #             score = new_score
+        #             best_epoch = epoch
+        # print("best epoch: %d \t F1 = %f" % (best_epoch, score))
+        # self.load_model(epoch=best_epoch)
+        # self.evaluation(test_loader)
 
 
 if __name__ == "__main__":

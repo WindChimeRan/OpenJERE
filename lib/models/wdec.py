@@ -168,6 +168,7 @@ class Attention(nn.Module):
         wq = self.linear_query(s_prev)
         wquh = torch.tanh(wq + uh)
         attn_weights = self.v(wquh).squeeze()
+        # TODO
         attn_weights.data.masked_fill_(src_mask.data, -float("inf"))
         attn_weights = F.softmax(attn_weights, dim=-1)
         ctx = torch.bmm(attn_weights.unsqueeze(1), enc_hs).squeeze()
@@ -333,9 +334,15 @@ class WDec(ABCModel):
                 dec_attn_i = torch.cat((dec_attn_i, cur_dec_attn_i), 1)
 
         if is_train:
+            # print(dec_out)
+            # print(target)
+
             dec_out = dec_out.view(-1, len(self.word_vocab))
             target = target.view(-1, 1).squeeze()
             loss = self.criterion(dec_out, target)
+
+            # print(loss.item())
+            # exit()
 
             output["loss"] = loss
 

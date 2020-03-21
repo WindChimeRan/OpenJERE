@@ -58,8 +58,8 @@ class WDec_preprocessing(ABC_data_preprocessing):
 
             seq = self.spo_to_seq(text, spo_list)
 
-            # if not self._check_seq(seq):
-            #     return None
+            if not self._check_seq(seq):
+                return None
 
         result = {"text": text, "spo_list": spo_list, "seq": seq}
         return json.dumps(result, ensure_ascii=False)
@@ -71,7 +71,7 @@ class WDec_preprocessing(ABC_data_preprocessing):
         # if len(text) > self.hyper.max_text_len:
         #     return False
 
-        # if len(set([t['subject'] for t in spo_list])) > self.hyper.max_decode_len:
+        # if len(spo_list) > self.hyper.max_decode_len:
         #     return False
 
         for t in spo_list:
@@ -80,7 +80,7 @@ class WDec_preprocessing(ABC_data_preprocessing):
         return True
 
     def _check_seq(self, seq):
-        pass
+        return len(seq.split(" ")) < 50
 
     def spo_to_seq(
         self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True
