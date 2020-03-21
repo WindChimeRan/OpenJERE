@@ -171,6 +171,15 @@ class Attention(nn.Module):
         # TODO
         attn_weights.data.masked_fill_(src_mask.data, -float("inf"))
         attn_weights = F.softmax(attn_weights, dim=-1)
+
+        # print(attn_weights)
+        # print(src_mask)
+        # print(torch.sum(attn_weights != attn_weights).any())
+        # print('-----')
+
+        # if torch.sum(attn_weights != attn_weights).any() > 0:
+        #     exit()
+
         ctx = torch.bmm(attn_weights.unsqueeze(1), enc_hs).squeeze()
         return ctx, attn_weights
 
