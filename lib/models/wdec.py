@@ -361,15 +361,10 @@ class WDec(ABCModel):
                 dec_attn_i = torch.cat((dec_attn_i, cur_dec_attn_i), 1)
 
         if is_train:
-            # print(dec_out)
-            # print(target)
 
             dec_out = dec_out.view(-1, len(self.word_vocab))
             target = target.view(-1, 1).squeeze()
             loss = self.criterion(dec_out, target)
-
-            # print(loss.item())
-            # exit()
 
             output["loss"] = loss
 
@@ -381,11 +376,11 @@ class WDec(ABCModel):
             result = []
             for i in range(0, len(preds)):
                 pred_words = get_pred_words(
-                    preds[i], attns[i], SrcWords[i], self.word_vocab, self.word_vocab
+                    preds[i], attns[i], SrcWords[i], self.word_vocab, self.rev_vocab
                 )
                 result.append(pred_words)
                 print(pred_words)
-                exit()
+            exit()
 
         return output
 
