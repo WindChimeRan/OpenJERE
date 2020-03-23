@@ -326,7 +326,6 @@ class WDec(ABCModel):
                     (dec_out, F.log_softmax(cur_dec_out, dim=-1).unsqueeze(1)), 1
                 )
         else:
-            # TODO
             dec_inp = sos
             dec_out, dec_hid, dec_attn = self.decoder(
                 dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_train
@@ -370,6 +369,8 @@ class WDec(ABCModel):
             output["description"] = partial(self.description, output=output)
 
         else:
+            spo_gold = sample.spo_gold
+            output["spo_gold"] = spo_gold
             preds = list(dec_out_i.data.cpu().numpy())
             attns = list(dec_attn_i.data.cpu().numpy())
             result = []
@@ -377,11 +378,48 @@ class WDec(ABCModel):
                 pred_words = get_pred_words(
                     preds[i], attns[i], SrcWords[i], self.word_vocab, self.rev_vocab
                 )
-                result.append(pred_words)
-                print(pred_words)
-            exit()
+                decoded_triplets = self.seq2triplet(pred_words)
+                result.append(decoded_triplets)
+            output["decode_result"] = result
+
+            # DEBUG
+            # for gt, pred in zip(output["spo_gold"], output["decode_result"]):
+            #     print([g.values() for g in gt])
+            #     print([p.values() for p in pred])
+            #     print('-'*100)
+            # exit()
 
         return output
+
+    def seq2triplet(self, pred_words: List[str]) -> List[Dict[str, str]]:
+        result = []
+        pred_words = self.hyper.join(pred_words[:-1])
+        for t in pred_words.split(SEP_VERTICAL_BAR):
+            parts = t.split(SEP_SEMICOLON)
+            if len(parts) != 3:
+                continue
+            em1 = parts[0].strip()
+            em2 = parts[1].strip()
+            rel = parts[2].strip()
+
+            if len(em1) == 0 or len(em2) == 0 or len(rel) == 0:
+                continue
+
+            # if em1 == em2:
+            #     same_cnt += 1
+            #     continue
+
+            if rel not in self.relation_vocab.keys():
+                continue
+
+            # if rel == 'None' or em1 == 'None' or em2 == 'None':
+            #     none_cnt += 1
+            #     continue
+
+            # triplet = (em1, em2, rel)
+            triplet = {"subject": em1, "predicate": rel, "object": em2}
+            result.append(triplet)
+        return result
 
     @staticmethod
     def description(epoch, epoch_num, output):

@@ -10,7 +10,7 @@
         "new_train_data.json", "new_validate_data.json"],
     "relation_vocab": "relation_vocab.json",
     "print_epoch": 1,
-    "evaluation_epoch":28,
+    "evaluation_epoch":29,
     "max_text_len": 1000,
     "cell_name": "lstm",
     "emb_size": 300,

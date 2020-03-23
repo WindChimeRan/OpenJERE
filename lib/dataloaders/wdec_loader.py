@@ -61,7 +61,9 @@ class WDec_Dataset(Abstract_dataset):
         tokens_id = self.text2id(text)
         trg_words = self.seq2id(seq)
 
-        trg_vocab_mask = get_target_vocab_mask(self.hyper.tokenizer(text), self.word_vocab, self.relation_vocab.keys())
+        trg_vocab_mask = get_target_vocab_mask(
+            self.hyper.tokenizer(text), self.word_vocab, self.relation_vocab.keys()
+        )
 
         return (
             tokens_id,
