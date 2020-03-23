@@ -77,8 +77,20 @@ early_stop_cnt = 5
 sample_cnt = 0
 Sample = recordclass("Sample", "Id SrcLen SrcWords TrgLen TrgWords AdjMat")
 
-# rel_file = os.path.join(src_data_folder, 'relations.txt')
-# relations = get_relations(rel_file)
+
+def get_pred_words(preds, attns, src_words, word_vocab, rev_word_vocab):
+    pred_words = []
+    for i in range(0, max_trg_len):
+        word_idx = preds[i]
+        if word_vocab[EOS] == word_idx:
+            pred_words.append(EOS)
+            break
+        elif copy_on and word_vocab[OOV] == word_idx:
+            word_idx = attns[i]
+            pred_words.append(src_words[word_idx])
+        else:
+            pred_words.append(rev_word_vocab[word_idx])
+    return pred_words
 
 
 class WordEmbeddings(nn.Module):
@@ -223,7 +235,6 @@ class WDec(ABCModel):
     def __init__(self, hyper):
         super(WDec, self).__init__()
         self.hyper = hyper
-        self.order = hyper.order
         self.data_root = hyper.data_root
         self.gpu = hyper.gpu
 
@@ -237,6 +248,8 @@ class WDec(ABCModel):
                 encoding="utf-8",
             )
         )
+        self.rev_vocab = {v: k for k, v in self.word_vocab.items()}
+
         self.word_embeddings = nn.Embedding(len(self.word_vocab), self.hyper.emb_size)
 
         # self.word_embeddings = WordEmbeddings(len(word_vocab), word_embed_dim, word_embed_matrix, drop_rate)
@@ -261,12 +274,17 @@ class WDec(ABCModel):
         # src_chars_seq = sample.src_chars_seq
         src_mask = sample.src_words_mask.cuda(self.gpu)
         trg_vocab_mask = sample.trg_vocab_mask.cuda(self.gpu)
-
+        SrcWords = list(map(lambda x: self.hyper.tokenizer(x), sample.text))
+        B = len(SrcWords)
         if is_train:
             trg_words_seq = sample.trg_words.cuda(self.gpu)
             target = sample.target.cuda(self.gpu)
 
             trg_word_embeds = self.word_embeddings(trg_words_seq)
+
+        # print(sample.trg_words[:, 0])
+        sos = torch.LongTensor(B * [self.word_vocab[SOS]]).cuda(self.gpu)
+        sos = self.word_embeddings(sos)
 
         src_word_embeds = self.word_embeddings(src_words_seq)
 
@@ -310,7 +328,7 @@ class WDec(ABCModel):
                 )
         else:
             # TODO
-            dec_inp = trg_word_embeds[:, 0, :]
+            dec_inp = sos
             dec_out, dec_hid, dec_attn = self.decoder(
                 dec_inp, dec_hid, encoder_output, src_word_embeds, src_mask, is_train
             )
@@ -357,9 +375,19 @@ class WDec(ABCModel):
 
             output["description"] = partial(self.description, output=output)
 
-            return output
         else:
-            return dec_out_i, dec_attn_i
+            preds = list(dec_out_i.data.cpu().numpy())
+            attns = list(dec_attn_i.data.cpu().numpy())
+            result = []
+            for i in range(0, len(preds)):
+                pred_words = get_pred_words(
+                    preds[i], attns[i], SrcWords[i], self.word_vocab, self.word_vocab
+                )
+                result.append(pred_words)
+                print(pred_words)
+                exit()
+
+        return output
 
     @staticmethod
     def description(epoch, epoch_num, output):

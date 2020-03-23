@@ -32,6 +32,7 @@ def get_target_vocab_mask(src_words, word_vocab):
     mask[word_vocab[SEP_VERTICAL_BAR]] = 0
     return mask
 
+
 def get_padded_mask(cur_len, max_len):
     mask_seq = list()
     for i in range(0, cur_len):
@@ -131,7 +132,7 @@ class Batch_reader(object):
 
         self.en_len = transposed_data[2]
         self.de_len = transposed_data[3]
-        self.trg_vocab_mask = torch.tensor(transposed_data[4])
+        self.trg_vocab_mask = torch.tensor(transposed_data[4]).bool()
         self.spo_gold = transposed_data[5]
         self.text = transposed_data[6]
 
