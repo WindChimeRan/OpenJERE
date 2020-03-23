@@ -157,7 +157,7 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             self.load_model(epoch=self.hyper.evaluation_epoch)
-            dev_set = self.Dataset(self.hyper, self.hyper.dev)
+            dev_set = self.Dataset(self.hyper, self.hyper.test)
             loader = self.Loader(
                 dev_set,
                 batch_size=self.hyper.batch_size_eval,

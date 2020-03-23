@@ -282,7 +282,6 @@ class WDec(ABCModel):
 
             trg_word_embeds = self.word_embeddings(trg_words_seq)
 
-        # print(sample.trg_words[:, 0])
         sos = torch.LongTensor(B * [self.word_vocab[SOS]]).cuda(self.gpu)
         sos = self.word_embeddings(sos)
 

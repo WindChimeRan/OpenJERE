@@ -18,43 +18,21 @@ import torch
 Sample = recordclass("Sample", "Id SrcLen SrcWords TrgLen TrgWords AdjMat")
 
 
-def get_target_vocab_mask(src_words, word_vocab):
+def get_target_vocab_mask(src_words, word_vocab, relations):
     mask = []
     for i in range(0, len(word_vocab)):
         mask.append(1)
     for word in src_words:
         if word in word_vocab:
             mask[word_vocab[word]] = 0
+    for rel in relations:
+        mask[word_vocab[rel]] = 0
 
     mask[word_vocab[OOV]] = 0
     mask[word_vocab[EOS]] = 0
     mask[word_vocab[SEP_SEMICOLON]] = 0
     mask[word_vocab[SEP_VERTICAL_BAR]] = 0
     return mask
-
-
-def get_padded_mask(cur_len, max_len):
-    mask_seq = list()
-    for i in range(0, cur_len):
-        mask_seq.append(0)
-    pad_len = max_len - cur_len
-    for i in range(0, pad_len):
-        mask_seq.append(1)
-    return mask_seq
-
-
-def get_max_len(sample_batch):
-    src_max_len = len(sample_batch[0].SrcWords)
-    for idx in range(1, len(sample_batch)):
-        if len(sample_batch[idx].SrcWords) > src_max_len:
-            src_max_len = len(sample_batch[idx].SrcWords)
-
-    trg_max_len = len(sample_batch[0].TrgWords)
-    for idx in range(1, len(sample_batch)):
-        if len(sample_batch[idx].TrgWords) > trg_max_len:
-            trg_max_len = len(sample_batch[idx].TrgWords)
-
-    return src_max_len, trg_max_len
 
 
 class WDec_Dataset(Abstract_dataset):
@@ -83,7 +61,7 @@ class WDec_Dataset(Abstract_dataset):
         tokens_id = self.text2id(text)
         trg_words = self.seq2id(seq)
 
-        trg_vocab_mask = get_target_vocab_mask(text, self.word_vocab)
+        trg_vocab_mask = get_target_vocab_mask(self.hyper.tokenizer(text), self.word_vocab, self.relation_vocab.keys())
 
         return (
             tokens_id,
