@@ -52,7 +52,10 @@ class WDec_preprocessing(ABC_data_preprocessing):
         # print(len(word_vocab), rel_size, ori_size)
         # assert len(word_vocab) == rel_size + ori_size
 
-        word_vocab = {k: i for i, k in enumerate(set(word_vocab.keys()) | set(relation_vocab.keys()))}
+        word_vocab = {
+            k: i
+            for i, k in enumerate(set(word_vocab.keys()) | set(relation_vocab.keys()))
+        }
 
         json.dump(word_vocab, open(target, "w", encoding="utf-8"), ensure_ascii=False)
 

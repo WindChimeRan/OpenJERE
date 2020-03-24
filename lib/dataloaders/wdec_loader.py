@@ -107,7 +107,7 @@ class Batch_reader(object):
         # TODO
         self.trg_words = torch.tensor(seq_padding(transposed_data[1]))
         self.target = torch.tensor(seq_padding([ins[1:] for ins in transposed_data[1]]))
-        self.src_words_mask = torch.lt(self.tokens_id, 0)
+        self.src_words_mask = torch.eq(self.tokens_id, 0)
         # self.seq_words_mask = torch.gt(self.seq_id, 0)
 
         self.en_len = transposed_data[2]

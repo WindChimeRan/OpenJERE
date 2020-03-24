@@ -14,6 +14,7 @@ from typing import Dict, List, Tuple, Set, Optional
 from .abc_dataset import Abstract_dataset
 from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS, PAD, SOS, NO_RELATION
 
+
 class Selection_Dataset(Abstract_dataset):
     def __init__(self, hyper, dataset):
 
