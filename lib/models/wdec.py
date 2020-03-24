@@ -36,18 +36,11 @@ def set_random_seeds(seed):
     torch.cuda.manual_seed_all(seed)
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 random_seed = 1234
 n_gpu = torch.cuda.device_count()
 set_random_seeds(random_seed)
 
-# src_data_folder = sys.argv[3]
-# trg_data_folder = sys.argv[4]
-# if not os.path.exists(trg_data_folder):
-#     os.mkdir(trg_data_folder)
-# model_name = 1
-# job_mode = sys.argv[5]
-# run = int(sys.argv[5])
+
 batch_size = 32
 num_epoch = 30
 max_src_len = 100
@@ -405,18 +398,9 @@ class WDec(ABCModel):
             if len(em1) == 0 or len(em2) == 0 or len(rel) == 0:
                 continue
 
-            # if em1 == em2:
-            #     same_cnt += 1
-            #     continue
-
             if rel not in self.relation_vocab.keys():
                 continue
 
-            # if rel == 'None' or em1 == 'None' or em2 == 'None':
-            #     none_cnt += 1
-            #     continue
-
-            # triplet = (em1, em2, rel)
             triplet = {"subject": em1, "predicate": rel, "object": em2}
             result.append(triplet)
         return result

@@ -12,7 +12,7 @@ from functools import partial
 from typing import Dict, List, Tuple, Set, Optional
 
 from .abc_dataset import Abstract_dataset
-
+from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS, PAD, SOS, NO_RELATION
 
 class Selection_Dataset(Abstract_dataset):
     def __init__(self, hyper, dataset):
@@ -68,7 +68,7 @@ class Selection_Dataset(Abstract_dataset):
         result = torch.zeros(
             (self.hyper.max_text_len, len(self.relation_vocab), self.hyper.max_text_len)
         )
-        NA = self.relation_vocab["N"]
+        NA = self.relation_vocab[NO_RELATION]
         result[:, NA, :] = 1
         for triplet in selection:
 

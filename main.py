@@ -157,9 +157,9 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             self.load_model(epoch=self.hyper.evaluation_epoch)
-            dev_set = self.Dataset(self.hyper, self.hyper.test)
+            test_set = self.Dataset(self.hyper, self.hyper.test)
             loader = self.Loader(
-                dev_set,
+                test_set,
                 batch_size=self.hyper.batch_size_eval,
                 pin_memory=True,
                 num_workers=8,
@@ -311,14 +311,14 @@ class Runner(object):
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
 
             self.save_model(epoch)
-        #     if epoch % self.hyper.print_epoch == 0 and epoch >= 2:
-        #         new_score = self.evaluation(dev_loader)
-        #         if new_score >= score:
-        #             score = new_score
-        #             best_epoch = epoch
-        # print("best epoch: %d \t F1 = %f" % (best_epoch, score))
-        # self.load_model(epoch=best_epoch)
-        # self.evaluation(test_loader)
+            if epoch % self.hyper.print_epoch == 0 and epoch >= 2:
+                new_score = self.evaluation(dev_loader)
+                if new_score >= score:
+                    score = new_score
+                    best_epoch = epoch
+        print("best epoch: %d \t F1 = %f" % (best_epoch, score))
+        self.load_model(epoch=best_epoch)
+        self.evaluation(test_loader)
 
 
 if __name__ == "__main__":

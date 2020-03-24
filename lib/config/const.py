@@ -6,7 +6,7 @@ EOS = "<eos>"
 SOS = "<sos>"
 SEP_SEMICOLON = "<;>"
 SEP_VERTICAL_BAR = "<|>"
-NO_RELATION = "N"
+NO_RELATION = "<NA>"
 
 
 def get_now_time():

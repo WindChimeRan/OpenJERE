@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple, Set, Optional
 from abc import ABC, abstractmethod
 
 from cached_property import cached_property
-from lib.config.const import PAD, OOV, EOS, SEP_SEMICOLON, SEP_VERTICAL_BAR
+from lib.config.const import PAD, OOV, EOS, SEP_SEMICOLON, NO_RELATION, SEP_VERTICAL_BAR
 
 
 class ABC_data_preprocessing(ABC):
@@ -89,6 +89,7 @@ class ABC_data_preprocessing(ABC):
                 result[k] = i
                 i += 1
         result[OOV] = i
+        assert len(result) == i + 1
         json.dump(result, open(target, "w", encoding="utf-8"), ensure_ascii=False)
 
     def spo_to_entities(self, text: str, spo_list: List[Dict[str, str]]) -> List[str]:
@@ -109,7 +110,7 @@ class ABC_data_preprocessing(ABC):
             rel_set.update(self.spo_to_relations(None, spo_list))
 
         relation_vocab = {k: v for v, k in enumerate(rel_set)}
-        relation_vocab["N"] = len(relation_vocab)
+        relation_vocab[NO_RELATION] = len(relation_vocab)
         json.dump(
             relation_vocab,
             open(self.relation_vocab_path, "w", encoding="utf-8"),

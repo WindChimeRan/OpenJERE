@@ -13,6 +13,7 @@ from functools import partial
 from pytorch_memlab import profile
 
 from lib.tagger.crf import CRF
+from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS, PAD, SOS, NO_RELATION
 from lib.metrics import F1_triplet
 
 # TODO Multi-Seq: 1. decode rel1, rel2... 2. given sent and rel1, decode head1, tail1, head2 ...
@@ -296,7 +297,7 @@ class CopyMB(nn.Module):
                         mat = step.view(B, text_len)
                         rel = mat[b, t].item()
                         rel = self.hyper.id2rel[rel]
-                        if rel == "N":
+                        if rel == NO_RELATION:
                             break
                     else:  # ent
                         # 3500 x 100 = 35 x 100 x 100
