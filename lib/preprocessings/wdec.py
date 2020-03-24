@@ -107,8 +107,8 @@ class WDec_preprocessing(ABC_data_preprocessing):
         spo_seq = []
         for triplet in spo_list:
 
-            object = triplet["object"]
-            subject = triplet["subject"]
+            object = ' '.join(self.hyper.tokenizer(triplet["object"]))
+            subject = ' '.join(self.hyper.tokenizer(triplet["subject"]))
             predicate = triplet["predicate"]
 
             tuple = (" " + SEP_SEMICOLON + " ").join((subject, object, predicate))
