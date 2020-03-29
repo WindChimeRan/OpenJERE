@@ -24,7 +24,7 @@ def key_list(lines, fn):
 
 
 def triplet_list(lines):
-    return key_list(lines, fn=lambda t: t["spo_list"])
+    return key_list(lines, fn=lambda t: [(spo["subject"], spo["predicate"], spo["object"]) for spo in t["spo_list"]])
 
 
 def text_list(lines):
@@ -34,7 +34,7 @@ def text_list(lines):
 def percentage_test_of_train(source, target, fn):
 
     s_list = fn(source)
-    t_list = fn(target)
+    t_list = set(fn(target))
     one = [t in s_list for t in t_list]
     # print(len(one))
     percentage = sum(one) / len(one)
@@ -68,14 +68,7 @@ def read_data(train, dev, test, shuffle=False):
 
     return train, dev, test
 
-def check_instance_overlap():
-    pass
-
-if __name__ == "__main__":
-    nyt_data_root = "raw_data/nyt/"
-
-    data_root = nyt_data_root
-
+def log_data(data_root):
     ptest = data_root + "new_test_data.json"
 
     ptrain = data_root + "new_train_data.json"
@@ -101,4 +94,28 @@ if __name__ == "__main__":
 
     print(data_root + ' '+ "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev))
 
-    print(data_root + ' '+ "test text overlap train = %.2f" % text_percentage_test_of_train(train, test))
+    print(data_root + ' '+ "test text overlap train = %.2f" % text_percentage_test_of_train(train, test))   
+    
+if __name__ == "__main__":
+    nyt_data_root = "raw_data/nyt/"
+
+    chinese_data_root = "raw_data/chinese/"
+
+    # log_data(nyt_data_root)
+    log_data(chinese_data_root)
+
+
+
+    '''
+    length of the datasets train 56196       dev 5000        test 5000
+    raw_data/nyt/ dev triplet overlap train = 0.77
+    raw_data/nyt/ test triplet overlap train = 0.77
+    raw_data/nyt/ dev text overlap train = 0.04
+    raw_data/nyt/ test text overlap train = 0.05
+    turn on SHUFFULE
+    length of the datasets train 56196       dev 5000        test 5000
+    raw_data/nyt/ dev triplet overlap train = 0.79
+    raw_data/nyt/ test triplet overlap train = 0.79
+    raw_data/nyt/ dev text overlap train = 0.05
+    raw_data/nyt/ test text overlap train = 0.04
+    '''
