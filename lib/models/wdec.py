@@ -391,8 +391,8 @@ class WDec(ABCModel):
             parts = t.split(SEP_SEMICOLON)
             if len(parts) != 3:
                 continue
-            em1 = self.hyper.join(parts[0].strip().split(' '))
-            em2 = self.hyper.join(parts[1].strip().split(' '))
+            em1 = self.hyper.join(parts[0].strip().split(" "))
+            em2 = self.hyper.join(parts[1].strip().split(" "))
             rel = parts[2].strip()
 
             if len(em1) == 0 or len(em2) == 0 or len(rel) == 0:
