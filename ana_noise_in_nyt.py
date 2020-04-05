@@ -24,7 +24,12 @@ def key_list(lines, fn):
 
 
 def triplet_list(lines):
-    return key_list(lines, fn=lambda t: [(spo["subject"], spo["predicate"], spo["object"]) for spo in t["spo_list"]])
+    return key_list(
+        lines,
+        fn=lambda t: [
+            (spo["subject"], spo["predicate"], spo["object"]) for spo in t["spo_list"]
+        ],
+    )
 
 
 def text_list(lines):
@@ -41,15 +46,21 @@ def percentage_test_of_train(source, target, fn):
 
     return percentage
 
+
 def triplet_percentage_test_of_train(source, target):
     return percentage_test_of_train(source, target, fn=triplet_list)
+
 
 def text_percentage_test_of_train(source, target):
     return percentage_test_of_train(source, target, fn=text_list)
 
 
 def read_data(train, dev, test, shuffle=False):
-    train, dev, test = list(yield_line(train)), list(yield_line(dev)), list(yield_line(test))
+    train, dev, test = (
+        list(yield_line(train)),
+        list(yield_line(dev)),
+        list(yield_line(test)),
+    )
 
     ltrain, ldev, ltest = map(len, (train, dev, test))
     print("length of the datasets train %d \t dev %d\t test %d" % (ltrain, ldev, ltest))
@@ -63,10 +74,11 @@ def read_data(train, dev, test, shuffle=False):
     test = all_data[-ltest:]
 
     assert len(train) == ltrain
-    assert len(dev)   == ldev
-    assert len(test)  == ltest
+    assert len(dev) == ldev
+    assert len(test) == ltest
 
     return train, dev, test
+
 
 def log_data(data_root):
     ptest = data_root + "new_test_data.json"
@@ -77,25 +89,62 @@ def log_data(data_root):
 
     train, dev, test = read_data(ptrain, pdev, ptest, shuffle=False)
 
-    print(data_root + ' '+ "dev triplet overlap train = %.2f" % triplet_percentage_test_of_train(train, dev))
+    print(
+        data_root
+        + " "
+        + "dev triplet overlap train = %.2f"
+        % triplet_percentage_test_of_train(train, dev)
+    )
 
-    print(data_root + ' '+ "test triplet overlap train = %.2f" % triplet_percentage_test_of_train(train, test))
+    print(
+        data_root
+        + " "
+        + "test triplet overlap train = %.2f"
+        % triplet_percentage_test_of_train(train, test)
+    )
 
-    print(data_root + ' '+ "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev))
+    print(
+        data_root
+        + " "
+        + "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev)
+    )
 
-    print(data_root + ' '+ "test text overlap train = %.2f" % text_percentage_test_of_train(train, test))
+    print(
+        data_root
+        + " "
+        + "test text overlap train = %.2f" % text_percentage_test_of_train(train, test)
+    )
 
     print("turn on SHUFFULE")
     train, dev, test = read_data(ptrain, pdev, ptest, shuffle=True)
 
-    print(data_root + ' '+ "dev triplet overlap train = %.2f" % triplet_percentage_test_of_train(train, dev))
+    print(
+        data_root
+        + " "
+        + "dev triplet overlap train = %.2f"
+        % triplet_percentage_test_of_train(train, dev)
+    )
 
-    print(data_root + ' '+ "test triplet overlap train = %.2f" % triplet_percentage_test_of_train(train, test))
+    print(
+        data_root
+        + " "
+        + "test triplet overlap train = %.2f"
+        % triplet_percentage_test_of_train(train, test)
+    )
 
-    print(data_root + ' '+ "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev))
+    print(
+        data_root
+        + " "
+        + "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev)
+    )
 
-    print(data_root + ' '+ "test text overlap train = %.2f" % text_percentage_test_of_train(train, test))   
-    
+    print(
+        data_root
+        + " "
+        + "test text overlap train = %.2f" % text_percentage_test_of_train(train, test)
+    )
+
+
 if __name__ == "__main__":
     nyt_data_root = "raw_data/nyt/"
 
@@ -104,9 +153,7 @@ if __name__ == "__main__":
     # log_data(nyt_data_root)
     log_data(chinese_data_root)
 
-
-
-    '''
+    """
     length of the datasets train 56196       dev 5000        test 5000
     raw_data/nyt/ dev triplet overlap train = 0.77
     raw_data/nyt/ test triplet overlap train = 0.77
@@ -118,4 +165,16 @@ if __name__ == "__main__":
     raw_data/nyt/ test triplet overlap train = 0.79
     raw_data/nyt/ dev text overlap train = 0.05
     raw_data/nyt/ test text overlap train = 0.04
-    '''
+
+    length of the datasets train 155794      dev 17315       test 21639
+    raw_data/chinese/ dev triplet overlap train = 0.25
+    raw_data/chinese/ test triplet overlap train = 0.24
+    raw_data/chinese/ dev text overlap train = 0.00
+    raw_data/chinese/ test text overlap train = 0.00
+    turn on SHUFFULE
+    length of the datasets train 155794      dev 17315       test 21639
+    raw_data/chinese/ dev triplet overlap train = 0.25
+    raw_data/chinese/ test triplet overlap train = 0.24
+    raw_data/chinese/ dev text overlap train = 0.00
+    raw_data/chinese/ test text overlap train = 0.00
+    """

@@ -172,7 +172,19 @@ class Runner(object):
             for path in self.hyper.raw_data_list:
                 self.summary_data(path)
         elif mode == "subevaluation":
-            raise NotImplementedError("subevaluation")
+            self.hyper.vocab_init()
+            self._init_model()
+            self.load_model(epoch=self.hyper.evaluation_epoch)
+            test_set = self.Dataset(self.hyper, self.hyper.filter_test)
+            loader = self.Loader(
+                test_set,
+                batch_size=self.hyper.batch_size_eval,
+                pin_memory=True,
+                num_workers=8,
+            )
+            f1 = self.evaluation(loader)
+            print("f1 = ", f1)
+            # raise NotImplementedError("subevaluation")
 
         elif mode == "debug":
             self.hyper.vocab_init()

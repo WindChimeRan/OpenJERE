@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Set, Optional
 
 CHINESE = "raw_data/chinese"
 WEBNLG = "raw_data/EWebNLG"
+NYT = "raw_data/nyt"
 
 
 def chinese_read_line(line: str) -> Tuple[str, int]:
