@@ -156,7 +156,8 @@ class Runner(object):
         elif mode == "evaluation":
             self.hyper.vocab_init()
             self._init_model()
-            self.load_model(epoch=self.hyper.evaluation_epoch)
+            # self.load_model(str(self.hyper.evaluation_epoch))
+            self.load_model("best")
             test_set = self.Dataset(self.hyper, self.hyper.test)
             loader = self.Loader(
                 test_set,
@@ -174,7 +175,7 @@ class Runner(object):
         elif mode == "subevaluation":
             self.hyper.vocab_init()
             self._init_model()
-            self.load_model(epoch=self.hyper.evaluation_epoch)
+            self.load_model("best")
             test_set = self.Dataset(self.hyper, self.hyper.filter_test)
             loader = self.Loader(
                 test_set,
@@ -207,17 +208,18 @@ class Runner(object):
         else:
             raise ValueError("invalid mode")
 
-    def load_model(self, epoch: int):
+    def load_model(self, name: str):
         self.model.load_state_dict(
-            torch.load(os.path.join(self.model_dir, self.exp_name + "_" + str(epoch)))
+            torch.load(os.path.join(self.model_dir, self.exp_name + "_" + name))
         )
 
-    def save_model(self, epoch: int):
+    def save_model(self, name: str):
+        # def save_model(self, epoch: int):
         if not os.path.exists(self.model_dir):
             os.mkdir(self.model_dir)
         torch.save(
             self.model.state_dict(),
-            os.path.join(self.model_dir, self.exp_name + "_" + str(epoch)),
+            os.path.join(self.model_dir, self.exp_name + "_" + name),
         )
 
     def summary_data(self, dataset):
@@ -241,13 +243,6 @@ class Runner(object):
         print("\n")
 
     def evaluation(self, loader):
-        # dev_set = self.DevDataset(self.hyper, self.hyper.dev)
-        # loader = self.DevLoader(
-        #     dev_set,
-        #     batch_size=self.hyper.batch_size_eval,
-        #     pin_memory=True,
-        #     num_workers=4,
-        # )
         self.model.metrics.reset()
         self.model.eval()
 
@@ -322,14 +317,15 @@ class Runner(object):
 
                 pbar.set_description(output["description"](epoch, self.hyper.epoch_num))
 
-            self.save_model(epoch)
+            self.save_model(str(epoch))
             if epoch % self.hyper.print_epoch == 0 and epoch >= 2:
                 new_score = self.evaluation(dev_loader)
                 if new_score >= score:
                     score = new_score
                     best_epoch = epoch
+                    self.save_model("best")
         print("best epoch: %d \t F1 = %f" % (best_epoch, score))
-        self.load_model(epoch=best_epoch)
+        self.load_model("best")
         self.evaluation(test_loader)
 
 

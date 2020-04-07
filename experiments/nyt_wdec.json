@@ -12,7 +12,7 @@
     "relation_vocab": "relation_vocab.json",
     "meta": "29 eval",
     "print_epoch": 1,
-    "evaluation_epoch":6,
+    "evaluation_epoch":25,
     "max_text_len": 1000,
     "cell_name": "lstm",
     "emb_size": 300,

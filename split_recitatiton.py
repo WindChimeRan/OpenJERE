@@ -47,7 +47,7 @@ def filter_test(data_root, dataset, cnt):
 
 
 def check_valid(spo_list, cnt):
-    MAX = 5
+    MAX = 3
     spo = [(t["subject"], t["predicate"], t["object"]) for t in spo_list]
     spo_freq = [cnt[tri] < MAX for tri in spo]
 
@@ -60,12 +60,6 @@ def process_all(data_root):
 
 
 if __name__ == "__main__":
-    # nyt_cnt = cnt_train(wdec_nyt_root)
-    # chinese_cnt = cnt_train(wdec_chinese_root)
-
-    # filter_test(wdec_nyt_root, "new_test_data.json", nyt_cnt)
-
-    # filter_test(wdec_chinese_root, "new_test_data.json", chinese_cnt)
 
     for root in data_root_list:
         process_all(root)
