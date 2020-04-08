@@ -3,6 +3,7 @@ import json
 import time
 import argparse
 import random
+import logging
 
 import torch
 
@@ -10,6 +11,9 @@ from typing import Dict, List, Tuple, Set, Optional
 
 # from prefetch_generator import BackgroundGenerator
 BackgroundGenerator = lambda x: x
+print = logging.info
+
+
 from tqdm import tqdm
 
 from collections import Counter
@@ -79,6 +83,13 @@ class Runner(object):
         self.model = None
 
         self.Dataset, self.Loader = self._init_loader(self.hyper.model)
+
+        logging.basicConfig(
+            filename=os.path.join("experiments", self.exp_name + ".log"),
+            filemode="w",
+            format="%(asctime)s - %(message)s",
+            level=logging.INFO,
+        )
 
     def _init_loader(self, name: str):
 
@@ -324,7 +335,7 @@ class Runner(object):
                     score = new_score
                     best_epoch = epoch
                     self.save_model("best")
-        print("best epoch: %d \t F1 = %f" % (best_epoch, score))
+        print("best epoch: %d \t F1 = %.2f" % (best_epoch, score))
         self.load_model("best")
         self.evaluation(test_loader)
 
