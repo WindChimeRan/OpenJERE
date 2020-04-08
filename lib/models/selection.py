@@ -9,7 +9,7 @@ import copy
 from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 
-
+from lib.config import EOS, PAD, SOS, OOV, NO_RELATION
 from lib.layer.crf import CRF
 from lib.metrics import F1_triplet
 from lib.models.abc_model import ABCModel
@@ -127,7 +127,7 @@ class MultiHeadSelection(ABCModel):
         text_list = sample.text
         spo_gold = sample.spo_gold
 
-        mask = tokens != self.word_vocab["<pad>"]  # batch x seq
+        mask = tokens != self.word_vocab[PAD]  # batch x seq
 
         embedded = self.word_embeddings(tokens)
         o, h = self.encoder(embedded)
@@ -216,7 +216,7 @@ class MultiHeadSelection(ABCModel):
             b, s, p, o = idx[i].tolist()
 
             predicate = reversed_relation_vocab[p]
-            if predicate == "N":
+            if predicate == NO_RELATION:
                 continue
             tags = list(map(lambda x: reversed_bio_vocab[x], sequence_tags[b]))
             object = find_entity(o, text_list[b], tags)

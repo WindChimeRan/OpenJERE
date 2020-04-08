@@ -12,7 +12,7 @@ from functools import partial
 from typing import Dict, List, Tuple, Set, Optional
 
 from .abc_dataset import Abstract_dataset
-from lib.config import SEP_SEMICOLON, SEP_VERTICAL_BAR, EOS, PAD, SOS, NO_RELATION
+from lib.config import EOS, PAD, SOS, OOV, NO_RELATION
 
 
 class Selection_Dataset(Abstract_dataset):
@@ -50,10 +50,10 @@ class Selection_Dataset(Abstract_dataset):
         return len(self.text_list)
 
     def text2tensor(self, text: List[str]) -> torch.tensor:
-        oov = self.word_vocab["<oov>"]
+        oov = self.word_vocab[OOV]
         padded_list = list(map(lambda x: self.word_vocab.get(x, oov), text))
         padded_list.extend(
-            [self.word_vocab["<pad>"]] * (self.hyper.max_text_len - len(text))
+            [self.word_vocab[PAD]] * (self.hyper.max_text_len - len(text))
         )
         return torch.tensor(padded_list)
 

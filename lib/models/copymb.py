@@ -15,6 +15,8 @@ from pytorch_memlab import profile
 from lib.layer.crf import CRF
 from lib.metrics import F1_triplet
 from lib.models.abc_model import ABCModel
+from lib.config import EOS, PAD, SOS, OOV, NO_RELATION
+
 
 
 class CopyMB(ABCModel):
@@ -300,7 +302,7 @@ class CopyMB(ABCModel):
                         mat = step.view(B, text_len)
                         rel = mat[b, t].item()
                         rel = self.hyper.id2rel[rel]
-                        if rel == "N":
+                        if rel == NO_RELATION:
                             break
                     else:  # ent
                         # 3500 x 100 = 35 x 100 x 100
