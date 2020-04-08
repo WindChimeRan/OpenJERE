@@ -1,8 +1,8 @@
 {
-    "dataset": "chinese",
+    "dataset": "nyt",
     "model": "selection",
-    "data_root": "data/chinese/multi_head_selection",
-    "raw_data_root": "raw_data/chinese",
+    "data_root": "data/nyt/multi_head_selection",
+    "raw_data_root": "raw_data/nyt",
     "train": "new_train_data.json",
     "dev": "new_dev_data.json",
     "test": "new_test_data.json",

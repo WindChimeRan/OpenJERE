@@ -44,6 +44,11 @@ Then run data_split for both datasets:
 python data_split.py
 ```
 
+```bash
+bash train_all.sh
+```
+
+seperate steps:
 
 ```shell
 python main.py --mode preprocessing --exp chinese_seq2umt_ops
