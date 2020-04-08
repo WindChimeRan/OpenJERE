@@ -4,7 +4,7 @@
     "data_root": "data/nyt/multi_head_selection",
     "raw_data_root": "raw_data/nyt",
     "train": "new_train_data.json",
-    "dev": "new_dev_data.json",
+    "dev": "new_validate_data.json",
     "test": "new_test_data.json",
     "raw_data_list": ["train_data.json","dev_data.json",
         "new_train_data.json", "new_validate_data.json", "new_test_data.json", "new_test1.json", "new_test2.json", "new_test3.json", "new_test4.json", "new_test5.json"],
