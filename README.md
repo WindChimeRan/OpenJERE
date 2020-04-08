@@ -119,23 +119,45 @@ Counter({1: 8917, 2: 6565, 3: 2107, 4: 1033, 5: 444, 6: 258, 7: 24, 8: 9, 9: 4, 
 
 **Unzip \*.json into ./raw_data/chinese/**
 
+## split_recitation.py
 
-# Result
-
-Training speed: 10min/epoch
-
-|  | precision | recall | f1 |
-| ------ | ------ | ------ | ------ |
-|Ours (dev) | 0.7443 | 0.6960 | 0.7194 |
-| Winner (test) | 0.8975 |0.8886 | 0.893 |
-
-
-# PRs welcome
-
-Current status
-* No hyperparameter tuning
-* No pretrained embedding
-* No bert embedding
-* No word-char embedding
-
-Need more datasets and compared models.
+data/chinese/seq2umt_ops valid sent / all sent = 17466/21586
+data/chinese/seq2umt_ops valid sent / all sent = 17263/21586
+data/chinese/seq2umt_ops valid sent / all sent = 17049/21586
+data/chinese/seq2umt_ops valid sent / all sent = 16853/21586
+data/chinese/seq2umt_ops valid sent / all sent = 16589/21586
+data/chinese/seq2umt_ops valid sent / all sent = 16239/21586
+data/chinese/seq2umt_ops valid sent / all sent = 15826/21586
+data/chinese/seq2umt_ops valid sent / all sent = 15447/21586
+data/chinese/seq2umt_ops valid sent / all sent = 14782/21586
+data/chinese/seq2umt_ops valid sent / all sent = 13884/21586
+data/chinese/wdec valid sent / all sent = 17969/19847
+data/chinese/wdec valid sent / all sent = 17830/19847
+data/chinese/wdec valid sent / all sent = 17671/19847
+data/chinese/wdec valid sent / all sent = 17490/19847
+data/chinese/wdec valid sent / all sent = 17244/19847
+data/chinese/wdec valid sent / all sent = 16951/19847
+data/chinese/wdec valid sent / all sent = 16630/19847
+data/chinese/wdec valid sent / all sent = 16126/19847
+data/chinese/wdec valid sent / all sent = 15247/19847
+data/chinese/wdec valid sent / all sent = 13227/19847
+data/nyt/wdec valid sent / all sent = 1849/4941
+data/nyt/wdec valid sent / all sent = 1793/4941
+data/nyt/wdec valid sent / all sent = 1726/4941
+data/nyt/wdec valid sent / all sent = 1637/4941
+data/nyt/wdec valid sent / all sent = 1522/4941
+data/nyt/wdec valid sent / all sent = 1426/4941
+data/nyt/wdec valid sent / all sent = 1298/4941
+data/nyt/wdec valid sent / all sent = 1114/4941
+data/nyt/wdec valid sent / all sent = 886/4941
+data/nyt/wdec valid sent / all sent = 582/4941
+data/nyt/seq2umt_ops valid sent / all sent = 1467/4974
+data/nyt/seq2umt_ops valid sent / all sent = 1424/4974
+data/nyt/seq2umt_ops valid sent / all sent = 1352/4974
+data/nyt/seq2umt_ops valid sent / all sent = 1293/4974
+data/nyt/seq2umt_ops valid sent / all sent = 1242/4974
+data/nyt/seq2umt_ops valid sent / all sent = 1165/4974
+data/nyt/seq2umt_ops valid sent / all sent = 1070/4974
+data/nyt/seq2umt_ops valid sent / all sent = 942/4974
+data/nyt/seq2umt_ops valid sent / all sent = 800/4974
+data/nyt/seq2umt_ops valid sent / all sent = 581/4974

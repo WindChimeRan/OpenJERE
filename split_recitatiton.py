@@ -29,9 +29,9 @@ def cnt_train(data_root):
     return triplet_cnt
 
 
-def filter_test(data_root, dataset, cnt):
+def filter_test(data_root, dataset, cnt, thr: int):
     source = os.path.join(data_root, dataset)
-    target = os.path.join(data_root, "filter" + dataset)
+    target = os.path.join(data_root, "filter_" + str(thr) + '_' + dataset)
     write_linenum = 0
     with open(source, "r", encoding="utf-8") as s, open(
         target, "w", encoding="utf-8"
@@ -39,15 +39,15 @@ def filter_test(data_root, dataset, cnt):
         for all_linenum, line in enumerate(s):
             jline = json.loads(line)
             spo_list = jline["spo_list"]
-            if check_valid(spo_list, cnt):
+            if check_valid(spo_list, cnt, thr):
                 t.write(line)
                 write_linenum += 1
     print(data_root + " valid sent / all sent = %d/%d" % (write_linenum, all_linenum))
     return write_linenum / all_linenum
 
 
-def check_valid(spo_list, cnt):
-    MAX = 3
+def check_valid(spo_list, cnt, MAX):
+    # MAX = 3
     spo = [(t["subject"], t["predicate"], t["object"]) for t in spo_list]
     spo_freq = [cnt[tri] < MAX for tri in spo]
 
@@ -56,7 +56,16 @@ def check_valid(spo_list, cnt):
 
 def process_all(data_root):
     cnt = cnt_train(data_root)
-    filter_test(data_root, "new_test_data.json", cnt)
+    filter_test(data_root, "new_test_data.json", cnt, 10)
+    filter_test(data_root, "new_test_data.json", cnt, 9)
+    filter_test(data_root, "new_test_data.json", cnt, 8)
+    filter_test(data_root, "new_test_data.json", cnt, 7)
+    filter_test(data_root, "new_test_data.json", cnt, 6)
+    filter_test(data_root, "new_test_data.json", cnt, 5)
+    filter_test(data_root, "new_test_data.json", cnt, 4)
+    filter_test(data_root, "new_test_data.json", cnt, 3)
+    filter_test(data_root, "new_test_data.json", cnt, 2)
+    filter_test(data_root, "new_test_data.json", cnt, 1)
 
 
 if __name__ == "__main__":

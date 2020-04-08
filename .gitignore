@@ -3,7 +3,7 @@ data/*
 saved_models
 raw_data.zip
 .vscode
-
+*.out
 
 # raw_data/chinese/*
 
