@@ -23,7 +23,7 @@
     "threshold": 0.5,
     "activation": "tanh",
     "optimizer": "adam",
-    "epoch_num":30,
+    "epoch_num":50,
     "batch_size_train": 32,
     "batch_size_eval":400,
     "seperator": " ",
