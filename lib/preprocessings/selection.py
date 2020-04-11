@@ -9,6 +9,7 @@ from overrides import overrides
 from cached_property import cached_property
 
 from lib.preprocessings.abc_preprocessor import ABC_data_preprocessing
+from lib.config.const import find
 
 
 class Selection_preprocessing(ABC_data_preprocessing):
@@ -75,15 +76,19 @@ class Selection_preprocessing(ABC_data_preprocessing):
         self, text: str, spo_list: List[Dict[str, str]]
     ) -> List[Dict[str, int]]:
 
+        tokens = self.hyper.tokenizer(text)
+
         selection = []
         for triplet in spo_list:
 
-            object = triplet["object"]
-            subject = triplet["subject"]
+            object = self.hyper.tokenizer(triplet["object"])
+            subject = self.hyper.tokenizer(triplet["subject"])
 
-            object_pos = text.find(object) + len(object) - 1
+            object_pos = find(tokens, object) + len(object) - 1
+            subject_pos = find(tokens, subject) + len(subject) - 1
+            # object_pos = text.find(object) + len(object) - 1
             relation_pos = self.relation_vocab[triplet["predicate"]]
-            subject_pos = text.find(subject) + len(subject) - 1
+            # subject_pos = text.find(subject) + len(subject) - 1
 
             selection.append(
                 {
@@ -96,10 +101,12 @@ class Selection_preprocessing(ABC_data_preprocessing):
         return selection
 
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
+        text = self.hyper.tokenizer(text)
         bio = ["O"] * len(text)
         for e in entities:
-            begin = text.find(e)
-            end = begin + len(e) - 1
+            begin = find(text, self.hyper.tokenizer(e))
+            # begin = text.find(e)
+            end = begin + len(self.hyper.tokenizer(e)) - 1
 
             assert end <= len(text)
 

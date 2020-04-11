@@ -189,7 +189,7 @@ class MultiHeadSelection(ABCModel):
 
         reversed_bio_vocab = {v: k for k, v in self.bio_vocab.items()}
 
-        text_list = list(map(list, text_list))
+        text_list = list(map(self.hyper.tokenizer, text_list))
 
         def find_entity(pos, text, sequence_tags):
             entity = []
