@@ -44,7 +44,15 @@ class Selection_Dataset(Abstract_dataset):
         bio_id = self.bio2tensor(bio)
         selection_id = self.selection2tensor(text, selection)
 
-        return tokens_id, bio_id, selection_id, len(text), spo, text, bio
+        return (
+            tokens_id,
+            bio_id,
+            selection_id,
+            len(self.hyper.tokenizer(text)),
+            spo,
+            text,
+            bio,
+        )
 
     def __len__(self):
         return len(self.text_list)

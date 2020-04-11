@@ -31,7 +31,7 @@ def cnt_train(data_root):
 
 def filter_test(data_root, dataset, cnt, thr: int):
     source = os.path.join(data_root, dataset)
-    target = os.path.join(data_root, "filter_" + str(thr) + '_' + dataset)
+    target = os.path.join(data_root, "filter_" + str(thr) + "_" + dataset)
     write_linenum = 0
     with open(source, "r", encoding="utf-8") as s, open(
         target, "w", encoding="utf-8"

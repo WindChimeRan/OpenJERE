@@ -58,7 +58,7 @@ class Selection_preprocessing(ABC_data_preprocessing):
     def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
         if spo_list == []:
             return False
-        if len(text) > self.hyper.max_text_len:
+        if len(self.hyper.tokenizer(text)) > self.hyper.max_text_len:
             return False
         for t in spo_list:
             if t["object"] not in text or t["subject"] not in text:

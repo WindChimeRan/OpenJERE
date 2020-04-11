@@ -115,6 +115,7 @@ class Batch_reader(object):
         self.trg_vocab_mask = torch.tensor(transposed_data[4]).bool()
         self.spo_gold = transposed_data[5]
         self.text = transposed_data[6]
+        self.length = self.en_len
 
     def pin_memory(self):
         self.tokens_id = self.tokens_id.pin_memory()

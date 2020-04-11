@@ -11,7 +11,7 @@ from typing import Dict, List, Tuple, Set, Optional
 
 # from prefetch_generator import BackgroundGenerator
 BackgroundGenerator = lambda x: x
-print = logging.info
+# print = logging.info
 
 
 from tqdm import tqdm
@@ -84,13 +84,6 @@ class Runner(object):
 
         self.Dataset, self.Loader = self._init_loader(self.hyper.model)
 
-        logging.basicConfig(
-            filename=os.path.join("experiments", self.exp_name + ".log"),
-            filemode="w",
-            format="%(asctime)s - %(message)s",
-            level=logging.INFO,
-        )
-
     def _init_loader(self, name: str):
 
         dataset_dic = {
@@ -133,7 +126,7 @@ class Runner(object):
         return p[name]
 
     def _init_model(self):
-        print(self.hyper.model)
+        logging.info(self.hyper.model)
         if self.hyper.model == "selection":
             self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
         elif self.hyper.model == "copymb":
@@ -181,8 +174,9 @@ class Runner(object):
 
         elif mode == "data_summary":
             self.hyper.vocab_init()
-            for path in self.hyper.raw_data_list:
-                self.summary_data(path)
+            # for path in self.hyper.raw_data_list:
+            #     self.summary_data(path)
+            self.summary_data(self.hyper.test)
         elif mode == "subevaluation":
             self.hyper.vocab_init()
             self._init_model()
@@ -194,7 +188,8 @@ class Runner(object):
                 pin_memory=True,
                 num_workers=8,
             )
-            f1 = self.evaluation(loader)
+            f1, log = self.evaluation(loader)
+            print(log)
             print("f1 = ", f1)
             # raise NotImplementedError("subevaluation")
 
@@ -248,6 +243,7 @@ class Runner(object):
             triplet_num.extend(list(map(len, sample.spo_gold)))
         print(dataset)
         print("sentence num %d" % len(len_sent_list))
+        print("all triplet num %d" % sum(triplet_num))
         print("avg sentence length %f" % (sum(len_sent_list) / len(len_sent_list)))
         print("avg triplet num %f" % (sum(triplet_num) / len(triplet_num)))
         print(Counter(triplet_num))
@@ -274,7 +270,18 @@ class Runner(object):
                 self.model.run_metrics(output)
 
         result = self.model.get_metric()
-        print(
+        # print(
+        #     ", ".join(
+        #         [
+        #             "%s: %.4f" % (name, value)
+        #             for name, value in result.items()
+        #             if not name.startswith("_")
+        #         ]
+        #     )
+        #     + " ||"
+        # )
+        score = result["fscore"]
+        log = (
             ", ".join(
                 [
                     "%s: %.4f" % (name, value)
@@ -284,9 +291,17 @@ class Runner(object):
             )
             + " ||"
         )
-        return result["fscore"]
+        return result["fscore"], log
 
     def train(self):
+
+        logging.basicConfig(
+            filename=os.path.join("experiments", self.exp_name + ".log"),
+            filemode="w",
+            format="%(asctime)s - %(message)s",
+            level=logging.INFO,
+        )
+
         train_set = self.Dataset(self.hyper, self.hyper.train)
         train_loader = self.Loader(
             train_set,
@@ -330,14 +345,16 @@ class Runner(object):
 
             self.save_model(str(epoch))
             if epoch % self.hyper.print_epoch == 0 and epoch >= 2:
-                new_score = self.evaluation(dev_loader)
+                new_score, log = self.evaluation(dev_loader)
+                logging.info(log)
                 if new_score >= score:
                     score = new_score
                     best_epoch = epoch
                     self.save_model("best")
-        print("best epoch: %d \t F1 = %.2f" % (best_epoch, score))
+        logging.info("best epoch: %d \t F1 = %.2f" % (best_epoch, score))
         self.load_model("best")
-        self.evaluation(test_loader)
+        new_score, log = self.evaluation(test_loader)
+        logging.info(log)
 
 
 if __name__ == "__main__":

@@ -18,7 +18,6 @@ from lib.models.abc_model import ABCModel
 from lib.config import EOS, PAD, SOS, OOV, NO_RELATION
 
 
-
 class CopyMB(ABCModel):
     def __init__(self, hyper) -> None:
         super(CopyMB, self).__init__()
