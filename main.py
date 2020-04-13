@@ -84,6 +84,13 @@ class Runner(object):
 
         self.Dataset, self.Loader = self._init_loader(self.hyper.model)
 
+        logging.basicConfig(
+            filename=os.path.join("experiments", self.exp_name + ".log"),
+            filemode="w",
+            format="%(asctime)s - %(message)s",
+            level=logging.INFO,
+        )
+        
     def _init_loader(self, name: str):
 
         dataset_dic = {
@@ -294,13 +301,6 @@ class Runner(object):
         return result["fscore"], log
 
     def train(self):
-
-        logging.basicConfig(
-            filename=os.path.join("experiments", self.exp_name + ".log"),
-            filemode="w",
-            format="%(asctime)s - %(message)s",
-            level=logging.INFO,
-        )
 
         train_set = self.Dataset(self.hyper, self.hyper.train)
         train_loader = self.Loader(
