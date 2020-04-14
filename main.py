@@ -188,16 +188,17 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             self.load_model("best")
-            test_set = self.Dataset(self.hyper, self.hyper.filter_test)
-            loader = self.Loader(
-                test_set,
-                batch_size=self.hyper.batch_size_eval,
-                pin_memory=True,
-                num_workers=8,
-            )
-            f1, log = self.evaluation(loader)
-            print(log)
-            print("f1 = ", f1)
+            for data in self.hyper.subsets:
+                test_set = self.Dataset(self.hyper, data)
+                loader = self.Loader(
+                    test_set,
+                    batch_size=self.hyper.batch_size_eval,
+                    pin_memory=True,
+                    num_workers=8,
+                )
+                f1, log = self.evaluation(loader)
+                print(log)
+                print("f1 = ", f1)
             # raise NotImplementedError("subevaluation")
 
         elif mode == "debug":

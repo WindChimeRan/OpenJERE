@@ -15,7 +15,7 @@ class Hyper(object):
         self.train: str
         self.dev: str
         self.test: str
-        self.filter_test: str
+        self.subsets: List[str]
         self.raw_data_list: List[str]
 
         self.relation_vocab: str
