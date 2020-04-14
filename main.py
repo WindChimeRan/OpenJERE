@@ -168,7 +168,8 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             # self.load_model(str(self.hyper.evaluation_epoch))
-            self.load_model("best")
+            # self.load_model("best")
+            self.load_model("40")
             test_set = self.Dataset(self.hyper, self.hyper.test)
             loader = self.Loader(
                 test_set,
@@ -176,7 +177,8 @@ class Runner(object):
                 pin_memory=True,
                 num_workers=8,
             )
-            f1 = self.evaluation(loader)
+            f1, log = self.evaluation(loader)
+            print(log)
             print("f1 = ", f1)
 
         elif mode == "data_summary":
