@@ -191,7 +191,7 @@ class MultiHeadSelection(ABCModel):
 
         # text_list = list(map(self.hyper.tokenizer, text_list))
         text_list = list(map(list, text_list))
-        
+
         def find_entity(pos, text, sequence_tags):
             entity = []
 

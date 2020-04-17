@@ -7,6 +7,7 @@ data_root_list = [
     "data/chinese/wdec",
     "data/nyt/wdec",
     "data/nyt/seq2umt_ops",
+    "data/nyt/seq2umt_pos",
 ]
 
 wdec_nyt_root = "data/nyt/wdec"

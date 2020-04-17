@@ -90,7 +90,7 @@ class Runner(object):
             format="%(asctime)s - %(message)s",
             level=logging.INFO,
         )
-        
+
     def _init_loader(self, name: str):
 
         dataset_dic = {
