@@ -51,6 +51,7 @@ from lib.models import (
     Seq2umt,
     Threetagging,
     WDec,
+    CopyMTL,
 )
 from lib.config import Hyper
 
@@ -140,20 +141,17 @@ class Runner(object):
 
     def _init_model(self):
         logging.info(self.hyper.model)
-        if self.hyper.model == "selection":
-            self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
-        elif self.hyper.model == "copymb":
-            self.model = CopyMB(self.hyper).cuda(self.gpu)
-        elif self.hyper.model == "twotagging":
-            self.model = Twotagging(self.hyper).cuda(self.gpu)
-        elif self.hyper.model == "seq2umt":
-            self.model = Seq2umt(self.hyper).cuda(self.gpu)
-        elif self.hyper.model == "threetagging":
-            self.model = Threetagging(self.hyper).cuda(self.gpu)
-        elif self.hyper.model == "wdec":
-            self.model = WDec(self.hyper).cuda(self.gpu)
-        else:
-            raise NotImplementedError("Future works!")
+        name = self.hyper.model
+        p = {
+            "selection": MultiHeadSelection,
+            "copymb": CopyMB,
+            "twotagging": Twotagging,
+            "seq2umt": Seq2umt,
+            "threetagging": Seq2umt,
+            "wdec": WDec,
+            "copymtl": CopyMTL,
+        }
+        self.model = p[name](self.hyper).cuda(self.gpu)
 
     def preprocessing(self):
         self.preprocessor.gen_relation_vocab()

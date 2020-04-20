@@ -116,10 +116,15 @@ class Copymb_preprocessing(ABC_data_preprocessing):
         return dic
 
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
+        text = self.hyper.tokenizer(text)
         bio = ["O"] * len(text)
         for e in entities:
-            begin = text.find(e)
-            end = begin + len(e) - 1
+            e_list = self.hyper.tokenizer(e)
+            begin = find(text, e_list)
+            end = begin + len(e_list) - 1
+
+            # begin = text.find(e)
+            # end = begin + len(e) - 1
 
             assert end <= len(text)
 

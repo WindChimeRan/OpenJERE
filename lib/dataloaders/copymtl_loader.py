@@ -52,9 +52,7 @@ class Copymtl_Dataset(Abstract_dataset):
 
     def text2tensor(self, text: List[str]) -> torch.tensor:
         oov = self.word_vocab["<oov>"]
-        padded_list = list(
-            map(lambda x: self.word_vocab.get(x, oov), self.tokenizer(text))
-        )
+        padded_list = list(map(lambda x: self.word_vocab.get(x, oov), text))
         padded_list.extend(
             [self.word_vocab["<pad>"]] * (self.hyper.max_text_len - len(text))
         )
@@ -68,24 +66,14 @@ class Copymtl_Dataset(Abstract_dataset):
         return torch.tensor(padded_list)
 
     def seq2tensor(self, text, seq):
-        # s p o
-        seq_tensor = torch.zeros(
-            (self.hyper.max_text_len, self.hyper.max_decode_len * 2 + 1)
-        ).long()
-
-        mask_tensor = seq_tensor.bool()
 
         NA = self.relation_vocab[NO_RELATION]
-        for i in range(self.hyper.max_text_len):
-            if str(i) not in seq:
-                seq_tensor[i, 0] = NA
-                mask_tensor[i, 0] = True
-        for s, pair in seq.items():
-            for i, ptr in enumerate(pair):
-                seq_tensor[int(s), i] = ptr
-                mask_tensor[int(s), i] = True
-            seq_tensor[int(s), i + 1] = NA
-            mask_tensor[int(s), i + 1] = True
+        seq_list = [seq + [NA] + [0] * (self.hyper.max_decode_len - len(seq))]
+        seq_tensor = torch.LongTensor(seq_list)
+        mask_list = (len(seq) + 1) * [True] + [False] * (
+            self.hyper.max_decode_len - len(seq) - 1
+        )
+        mask_tensor = torch.BoolTensor(mask_list)
 
         assert mask_tensor.sum() > 0
 
@@ -98,6 +86,9 @@ class Batch_reader(object):
         # tokens_id, bio_id, seq_id, spo, text, bio
 
         self.tokens_id = torch.stack(transposed_data[0], 0)
+        # for t in transposed_data[1]:
+        #     print(t.size())
+
         self.bio_id = torch.stack(transposed_data[1], 0)
         self.seq_id = torch.stack(transposed_data[2], 0)
         self.mask_decode = torch.stack(transposed_data[7], 0)
