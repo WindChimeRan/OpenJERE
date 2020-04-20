@@ -32,14 +32,14 @@ seq2umtree = [0.5727, 0.7428, 0.7053, 0.7485, 0.7852]
 #         # print(score)
 # print(result)
 x = [1, 2, 3, 4, 5]
-plt.plot(x, wdec, color='g', label='WDec')
-plt.plot(x, seq2umtree, color='orange', label='Seq2UMTree')
+plt.plot(x, wdec, color="g", label="WDec")
+plt.plot(x, seq2umtree, color="orange", label="Seq2UMTree")
 # plt.plot(x, selection, color='blue',  label='Selection')
 
-plt.xlabel('Triplet number per sentence')
-plt.ylabel('F1')
+plt.xlabel("Triplet number per sentence")
+plt.ylabel("F1")
 plt.ylim(0, 1)
-plt.xticks(range(1,6), ["1", "2", "3", "4", ">4x"])
+plt.xticks(range(1, 6), ["1", "2", "3", "4", ">4x"])
 
 plt.legend()
 # plt.title('DuIE')

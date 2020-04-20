@@ -26,6 +26,7 @@ from lib.preprocessings import (
     Twotagging_preprocessing,
     Seq2umt_preprocessing,
     WDec_preprocessing,
+    Copymtl_preprocessing,
 )
 
 from lib.dataloaders import (
@@ -99,6 +100,7 @@ class Runner(object):
             "twotagging": Twotagging_Dataset,
             "seq2umt": Seq2umt_Dataset,
             "wdec": WDec_Dataset,
+            "copymtl": None,
         }
 
         loader_dic = {
@@ -107,6 +109,7 @@ class Runner(object):
             "twotagging": Twotagging_loader,
             "seq2umt": Seq2umt_loader,
             "wdec": WDec_loader,
+            "copymtl": None,
         }
 
         Dataset = dataset_dic[name]
@@ -129,6 +132,7 @@ class Runner(object):
             "seq2umt": Seq2umt_preprocessing(self.hyper),
             "threetagging": Seq2umt_preprocessing(self.hyper),
             "wdec": WDec_preprocessing(self.hyper),
+            "copymtl": Copymtl_preprocessing(self.hyper),
         }
         return p[name]
 

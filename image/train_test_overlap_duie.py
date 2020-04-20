@@ -35,22 +35,31 @@ f1 =  0.7388079627377111
 # F1 scores
 x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 wdec = [0.6491, 0.6226, 0.6119, 0.606, 0.6032, 0.5997, 0.5973, 0.596, 0.5946, 0.5933]
-seq2umtree = [0.7656, 0.7594, 0.7551, 0.7526, 0.7494, 0.7465, 0.7442, 0.7422, 0.7406, 0.7388]
+seq2umtree = [
+    0.7656,
+    0.7594,
+    0.7551,
+    0.7526,
+    0.7494,
+    0.7465,
+    0.7442,
+    0.7422,
+    0.7406,
+    0.7388,
+]
 selection = [t + 0.15 for t in wdec]
 
 
-
-
-plt.plot(x, wdec, color='g', label='WDec')
+plt.plot(x, wdec, color="g", label="WDec")
 # TODO
-plt.plot(x, seq2umtree, color='orange', label='Seq2UMTree')
+plt.plot(x, seq2umtree, color="orange", label="Seq2UMTree")
 # plt.plot(x, selection, color='blue',  label='Selection')
 
-plt.xlabel('Frequency threshold')
-plt.ylabel('F1')
+plt.xlabel("Frequency threshold")
+plt.ylabel("F1")
 plt.ylim(0, 1)
 plt.legend()
-plt.title('DuIE')
+plt.title("DuIE")
 plt.show()
 
 # print(a.splitlines())
