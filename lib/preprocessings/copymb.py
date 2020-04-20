@@ -9,6 +9,7 @@ from cached_property import cached_property
 from overrides import overrides
 
 from lib.preprocessings.abc_preprocessor import ABC_data_preprocessing
+from lib.config.const import find
 
 
 class Copymb_preprocessing(ABC_data_preprocessing):
@@ -54,7 +55,7 @@ class Copymb_preprocessing(ABC_data_preprocessing):
     def _check_valid(self, text: str, spo_list: List[Dict[str, str]]) -> bool:
         if spo_list == []:
             return False
-        if len(text) > self.hyper.max_text_len:
+        if len(self.hyper.tokenizer(text)) > self.hyper.max_text_len:
             return False
 
         # if len(set([t['subject'] for t in spo_list])) > self.hyper.max_decode_len:
@@ -84,14 +85,20 @@ class Copymb_preprocessing(ABC_data_preprocessing):
         self, text: str, spo_list: List[Dict[str, str]], s_fst: bool = True
     ) -> Dict[int, List[int]]:
         dic = {}
+        tokens = self.hyper.tokenizer(text)
+
         for triplet in spo_list:
 
-            object = triplet["object"]
-            subject = triplet["subject"]
+            # object = triplet["object"]
+            # subject = triplet["subject"]
+            object = self.hyper.tokenizer(triplet["object"])
+            subject = self.hyper.tokenizer(triplet["subject"])
 
+            object_pos = find(tokens, object) + len(object) - 1
+            subject_pos = find(tokens, subject) + len(subject) - 1
             object_pos = text.find(object) + len(object) - 1
             relation_pos = self.relation_vocab[triplet["predicate"]]
-            subject_pos = text.find(subject) + len(subject) - 1
+            # subject_pos = text.find(subject) + len(subject) - 1
 
             # dangerous!!!
             # ------------------------------------------------- #

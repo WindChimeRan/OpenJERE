@@ -40,6 +40,8 @@ from lib.dataloaders import (
     Seq2umt_loader,
     WDec_Dataset,
     WDec_loader,
+    Copymtl_Dataset,
+    Copymtl_loader,
 )
 from lib.metrics import F1_triplet
 from lib.models import (
@@ -100,7 +102,7 @@ class Runner(object):
             "twotagging": Twotagging_Dataset,
             "seq2umt": Seq2umt_Dataset,
             "wdec": WDec_Dataset,
-            "copymtl": None,
+            "copymtl": Copymtl_Dataset,
         }
 
         loader_dic = {
@@ -109,7 +111,7 @@ class Runner(object):
             "twotagging": Twotagging_loader,
             "seq2umt": Seq2umt_loader,
             "wdec": WDec_loader,
-            "copymtl": None,
+            "copymtl": Copymtl_loader,
         }
 
         Dataset = dataset_dic[name]
