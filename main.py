@@ -6,9 +6,11 @@ import random
 import logging
 
 import torch
+import numpy as np
 
 from typing import Dict, List, Tuple, Set, Optional
 
+# from torchsummary import summary
 # from prefetch_generator import BackgroundGenerator
 BackgroundGenerator = lambda x: x
 # print = logging.info
@@ -68,7 +70,7 @@ parser.add_argument(
     "-m",
     type=str,
     default="train",
-    help="preprocessing|train|evaluation|subevaluation|data_summary",
+    help="preprocessing|train|evaluation|subevaluation|data_summary|model_summary",
 )
 args = parser.parse_args()
 
@@ -172,8 +174,8 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             # self.load_model(str(self.hyper.evaluation_epoch))
-            # self.load_model("best")
-            self.load_model("40")
+            self.load_model("best")
+            # self.load_model("40")
             test_set = self.Dataset(self.hyper, self.hyper.test)
             loader = self.Loader(
                 test_set,
@@ -190,6 +192,14 @@ class Runner(object):
             # for path in self.hyper.raw_data_list:
             #     self.summary_data(path)
             self.summary_data(self.hyper.test)
+        elif mode == "model_summary":
+            self.hyper.vocab_init()
+            self._init_model()
+            self.load_model("best")
+            parameter_num = np.sum([p.numel() for p in self.model.parameters()]).item()
+            print(self.model)
+            print(parameter_num)
+
         elif mode == "subevaluation":
             self.hyper.vocab_init()
             self._init_model()
