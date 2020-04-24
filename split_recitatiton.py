@@ -108,7 +108,7 @@ def nyt_pro(data_root, cnt):
 
 
 if __name__ == "__main__":
-    nyt_list = ["data/nyt/wdec", "data/nyt/seq2umt_pos"]
+    nyt_list = ["data/nyt/wdec", "data/nyt/seq2umt_pos", "data/nyt/multi_head_selection"]
     cnt = cnt_train(nyt_list[1])
     for root in nyt_list:
         nyt_pro(root, cnt)
