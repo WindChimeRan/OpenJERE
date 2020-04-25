@@ -34,12 +34,10 @@ mhs = [0.5506, 0.7287, 0.6906, 0.7146, 0.7525]
 # print(result)
 
 
-
-
 x = [1, 2, 3, 4, 5]
 plt.plot(x, wdec, color="g", label="WDec")
 plt.plot(x, seq2umtree, color="orange", label="Seq2UMTree")
-plt.plot(x, mhs, color='blue',  label='MHS')
+plt.plot(x, mhs, color="blue", label="MHS")
 
 plt.xlabel("Triplet number per sentence")
 plt.ylabel("F1")

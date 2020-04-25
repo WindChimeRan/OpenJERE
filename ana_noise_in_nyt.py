@@ -39,7 +39,7 @@ def text_list(lines):
 def percentage_test_of_train(source, target, fn):
 
     s_list = fn(source)
-    t_list = set(fn(target))
+    t_list = fn(target)
     one = [t in s_list for t in t_list]
     # print(len(one))
     percentage = sum(one) / len(one)
@@ -78,6 +78,75 @@ def read_data(train, dev, test, shuffle=False):
     assert len(test) == ltest
 
     return train, dev, test
+
+
+def log_order(data_root):
+    ptest = data_root + "new_test_data.json"
+
+    ptrain = data_root + "new_train_data.json"
+
+    pdev = data_root + "new_validate_data.json"
+
+    train, dev, test = read_data(ptrain, pdev, ptest, shuffle=False)
+
+    print(
+        data_root
+        + " "
+        + "dev triplet overlap train = %.3f"
+        % triplet_percentage_test_of_train(train, dev)
+    )
+
+    print(
+        data_root
+        + " "
+        + "test triplet overlap train = %.3f"
+        % triplet_percentage_test_of_train(train, test)
+    )
+
+    print(
+        data_root
+        + " "
+        + "op test triplet overlap train = %.3f"
+        % percentage_test_of_train(
+            train,
+            test,
+            fn=lambda lines: key_list(
+                lines,
+                fn=lambda t: [
+                    (spo["predicate"], spo["object"]) for spo in t["spo_list"]
+                ],
+            ),
+        )
+    )
+
+    print(
+        data_root
+        + " "
+        + "so test triplet overlap train = %.3f"
+        % percentage_test_of_train(
+            train,
+            test,
+            fn=lambda lines: key_list(
+                lines,
+                fn=lambda t: [(spo["subject"], spo["object"]) for spo in t["spo_list"]],
+            ),
+        )
+    )
+    print(
+        data_root
+        + " "
+        + "sp test triplet overlap train = %.3f"
+        % percentage_test_of_train(
+            train,
+            test,
+            fn=lambda lines: key_list(
+                lines,
+                fn=lambda t: [
+                    (spo["subject"], spo["predicate"]) for spo in t["spo_list"]
+                ],
+            ),
+        )
+    )
 
 
 def log_data(data_root):
@@ -151,7 +220,8 @@ if __name__ == "__main__":
     chinese_data_root = "raw_data/chinese/"
 
     # log_data(nyt_data_root)
-    log_data(chinese_data_root)
+    # log_data(nyt_data_root)
+    log_order(chinese_data_root)
 
     """
     length of the datasets train 56196       dev 5000        test 5000

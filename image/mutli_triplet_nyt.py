@@ -27,7 +27,7 @@ selection = [0.5793, 0.4267, 0.3548]
 x = [1, 2, 3]
 plt.plot(x, wdec, color="g", label="WDec")
 plt.plot(x, seq2umtree, color="orange", label="Seq2UMTree")
-plt.plot(x, selection, color='blue',  label='MHS')
+plt.plot(x, selection, color="blue", label="MHS")
 
 plt.xlabel("Triplet number per sentence")
 plt.ylabel("F1")
