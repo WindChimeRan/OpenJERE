@@ -76,8 +76,8 @@ class Seq2umt(ABCModel):
 
         self.mBCE = MaskedBCE()
         self.BCE = torch.nn.BCEWithLogitsLoss()
-        # self.metrics = F1_triplet()
-        self.metrics = F1_ps()
+        self.metrics = F1_triplet()
+        # self.metrics = F1_()
 
         self.get_metric = self.metrics.get_metric
         self.encoder = Encoder(
