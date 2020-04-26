@@ -66,24 +66,6 @@ def filter_test_num(data_root, dataset, cnt, thr: int, num: int, fn):
     return write_linenum / all_linenum
 
 
-def filter_partial_triplet(data_root, dataset, cnt, thr: int, num: int, fn):
-    # filter the sub test set whose freq less than thr
-    source = os.path.join(data_root, dataset)
-    target = os.path.join(data_root, "new" + str(thr) + "_" + str(num) + "_" + dataset)
-    write_linenum = 0
-    with open(source, "r", encoding="utf-8") as s, open(
-        target, "w", encoding="utf-8"
-    ) as t:
-        for all_linenum, line in enumerate(s):
-            jline = json.loads(line)
-            spo_list = jline["spo_list"]
-            if check_thr(spo_list, cnt, thr) and check_num(spo_list, fn):
-                t.write(line)
-                write_linenum += 1
-    print(data_root + " valid sent / all sent = %d/%d" % (write_linenum, all_linenum))
-    return write_linenum / all_linenum
-
-
 def check_num(spo_list, fn):
     # MAX = 3
     spo = [(t["subject"], t["predicate"], t["object"]) for t in spo_list]

@@ -10,7 +10,7 @@ import copy
 from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 
-from lib.metrics import F1_triplet
+from lib.metrics import F1_op, F1_os, F1_ps, F1_triplet
 from lib.models.abc_model import ABCModel
 
 from lib.layer import Attention, MaskedBCE
@@ -76,7 +76,9 @@ class Seq2umt(ABCModel):
 
         self.mBCE = MaskedBCE()
         self.BCE = torch.nn.BCEWithLogitsLoss()
-        self.metrics = F1_triplet()
+        # self.metrics = F1_triplet()
+        self.metrics = F1_ps()
+
         self.get_metric = self.metrics.get_metric
         self.encoder = Encoder(
             len(self.word_vocab), self.hyper.emb_size, self.hyper.hidden_size
@@ -98,9 +100,7 @@ class Seq2umt(ABCModel):
     def run_metrics(self, output):
         # # whole triplet
         self.metrics(
-            output["decode_result"],
-            output["spo_gold"],
-            get_seq=lambda dic: (dic["object"], dic["predicate"], dic["subject"]),
+            output["decode_result"], output["spo_gold"],
         )
 
         # # rel only

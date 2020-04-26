@@ -97,15 +97,17 @@ class Seq2umt_preprocessing(ABC_data_preprocessing):
         # rel, subj, obj
         #
         result = []
-        t1_out = [t[order[0]] for t in spo_list]
+        t1_out = list(set(t[order[0]] for t in spo_list))
         for t1_in in t1_out:
-            t2_out = [t[order[1]] for t in spo_list if t[order[0]] == t1_in]
+            t2_out = list(set(t[order[1]] for t in spo_list if t[order[0]] == t1_in))
             for t2_in in t2_out:
-                t3_out = [
-                    t[order[2]]
-                    for t in spo_list
-                    if t[order[0]] == t1_in and t[order[1]] == t2_in
-                ]
+                t3_out = list(
+                    set(
+                        t[order[2]]
+                        for t in spo_list
+                        if t[order[0]] == t1_in and t[order[1]] == t2_in
+                    )
+                )
                 result.append((t1_in, t2_in, t1_out, t2_out, t3_out))
         return result
 
