@@ -285,12 +285,31 @@ class Runner(object):
 
                 # # DEBUG: error analysis
 
-                # for g, p in zip(output['spo_gold'], output['decode_result']):
+                # # WDec
+                # for text, g, p, seq, in zip(
+                #     output["text"],
+                #     output["spo_gold"],
+                #     output["decode_result"],
+                #     output["seq"],
+                # ):
+                #     print(text)
                 #     print(g)
                 #     print(p)
-                #     print('-'*50)
+                #     print(seq)
+                #     print("-" * 50)
                 # exit()
 
+                # Seq2UMT
+                for text, g, p in zip(
+                    output["text"],
+                    output["spo_gold"],
+                    output["decode_result"],
+                ):
+                    print(text)
+                    print(g)
+                    print(p)
+                exit()
+                
                 self.model.run_metrics(output)
 
         result = self.model.get_metric()

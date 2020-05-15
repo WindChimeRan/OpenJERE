@@ -294,7 +294,7 @@ class WDec(ABCModel):
         c0 = c0.cuda()
         dec_hid = (h0, c0)
 
-        output = {}
+        output = {"text": sample.text}
 
         if is_train:
             dec_inp = trg_word_embeds[:, 0, :]
@@ -367,13 +367,16 @@ class WDec(ABCModel):
             preds = list(dec_out_i.data.cpu().numpy())
             attns = list(dec_attn_i.data.cpu().numpy())
             result = []
+            seq = []
             for i in range(0, len(preds)):
                 pred_words = get_pred_words(
                     preds[i], attns[i], SrcWords[i], self.word_vocab, self.rev_vocab
                 )
+                seq.append(pred_words)
                 decoded_triplets = self.seq2triplet(pred_words)
                 result.append(decoded_triplets)
             output["decode_result"] = result
+            output["seq"] = seq
 
             # DEBUG
             # for gt, pred in zip(output["spo_gold"], output["decode_result"]):

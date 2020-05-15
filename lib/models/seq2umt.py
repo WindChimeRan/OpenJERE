@@ -111,7 +111,7 @@ class Seq2umt(ABCModel):
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
-        output = {}
+        output = {"text": list(map(self.hyper.join, sample.text))}
 
         t = text_id = sample.T.cuda(self.gpu)
         length = sample.length
