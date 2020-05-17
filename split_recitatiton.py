@@ -95,7 +95,7 @@ def process_all(data_root):
 
 
 def nyt_pro(data_root, cnt):
-    # cnt = cnt_train(data_root)
+    # nyt: 1, 2, 3, when freq <= 10
     filter_test_num(
         data_root, "new_test_data.json", cnt, 10, 1, fn=lambda length: length == 1
     )
@@ -107,15 +107,47 @@ def nyt_pro(data_root, cnt):
     )
 
 
+def nyt_ab_test(data_root):
+    split_test(data_root)
+
+
+def split_test(data_root):
+    source = os.path.join(data_root, "new_test_data.json")
+    target_o = os.path.join(data_root, "test_o.json")
+    target_no = os.path.join(data_root, "test_no.json")
+
+
+    s_set = set()  # seen
+    ns_set = set() # unseen 
+    dic2tuple = lambda dic: (dic['subject'], dic['predicate'], dic['object'])
+    seen_cnt = 0
+    unseen_cnt = 0
+    with open(source, "r", encoding="utf-8") as s, open(
+        target_o, "w", encoding="utf-8"
+    ) as tseen, open(target_no, "w", encoding="utf-8") as tnseen:
+
+        for all_linenum, line in enumerate(s):
+            jline = json.loads(line)
+            spo_list = list(map(dic2tuple, jline["spo_list"]))
+            if any([spo in ns_set for spo in spo_list]): # any sop are in the unseen set
+                tseen.write(line)
+                s_set.update(spo_list)
+                seen_cnt += 1
+            else:
+                tnseen.write(line)
+                ns_set.update(spo_list)
+                unseen_cnt += 1
+    print(seen_cnt, unseen_cnt)
+
 if __name__ == "__main__":
     nyt_list = [
         "data/nyt/wdec",
         "data/nyt/seq2umt_pos",
-        "data/nyt/multi_head_selection",
+        # "data/nyt/multi_head_selection",
     ]
     cnt = cnt_train(nyt_list[1])
     for root in nyt_list:
-        nyt_pro(root, cnt)
-
+        # nyt_pro(root, cnt)
+        nyt_ab_test(root)
     # for root in data_root_list:
     #     process_all(root)

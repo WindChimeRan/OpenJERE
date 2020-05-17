@@ -253,6 +253,28 @@ class Runner(object):
         )
 
     def summary_data(self, dataset):
+        def count_numsubset_overlap(triplets: List[Dict[str, str]], n: int = 2) -> None:
+            def _eq_tripletsNum_n(triplets, n):
+                return len(triplets) == n
+
+            def _is_olp(ts):
+                ent_list = [t["subject"] for t in ts] + [t["object"] for t in ts]
+                ent_set = set(ent_list)
+                return len(ent_list) != len(ent_set)
+
+            cnt_all = 0
+            cnt_olp = 0
+            for ts in triplets:
+                if _eq_tripletsNum_n(ts, n):
+                    cnt_all += 1
+                    if _is_olp(ts):
+                        cnt_olp += 1
+            log = (
+                "num = %d, all sentence = %d, overlapped sentence = %d, rate = %.2f"
+                % (n, cnt_all, cnt_olp, cnt_olp / cnt_all * 100)
+            )
+            print(log)
+
         # TODO
         data = self.Dataset(self.hyper, dataset)
         loader = self.Loader(data, batch_size=400, pin_memory=True, num_workers=4)
@@ -261,10 +283,15 @@ class Runner(object):
 
         len_sent_list = []
         triplet_num = []
+        triplets = []
 
-        for batch_ndx, sample in pbar:
-            len_sent_list.extend(sample.length)
-            triplet_num.extend(list(map(len, sample.spo_gold)))
+        ## count_numsubset_overlap
+        # for batch_ndx, sample in pbar:
+        #     len_sent_list.extend(sample.length)
+        #     triplet_num.extend(list(map(len, sample.spo_gold)))
+        #     triplets.extend(sample.spo_gold)
+        # count_numsubset_overlap(triplets, 2)
+        # exit()
         print(dataset)
         print("sentence num %d" % len(len_sent_list))
         print("all triplet num %d" % sum(triplet_num))
@@ -301,15 +328,13 @@ class Runner(object):
 
                 # Seq2UMT
                 for text, g, p in zip(
-                    output["text"],
-                    output["spo_gold"],
-                    output["decode_result"],
+                    output["text"], output["spo_gold"], output["decode_result"],
                 ):
                     print(text)
                     print(g)
                     print(p)
                 exit()
-                
+
                 self.model.run_metrics(output)
 
         result = self.model.get_metric()
