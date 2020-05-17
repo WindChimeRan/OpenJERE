@@ -327,13 +327,13 @@ class Runner(object):
                 # exit()
 
                 # Seq2UMT
-                for text, g, p in zip(
-                    output["text"], output["spo_gold"], output["decode_result"],
-                ):
-                    print(text)
-                    print(g)
-                    print(p)
-                exit()
+                # for text, g, p in zip(
+                #     output["text"], output["spo_gold"], output["decode_result"],
+                # ):
+                #     print(text)
+                #     print(g)
+                #     print(p)
+                # exit()
 
                 self.model.run_metrics(output)
 

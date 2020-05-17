@@ -108,7 +108,12 @@ def nyt_pro(data_root, cnt):
 
 
 def nyt_ab_test(data_root):
-    split_test(data_root)
+    s_set, _ = split_test(data_root)
+    split_train(root, s_set)
+
+
+def dic2tuple(dic):
+    return (dic["subject"], dic["predicate"], dic["object"])
 
 
 def split_test(data_root):
@@ -116,10 +121,8 @@ def split_test(data_root):
     target_o = os.path.join(data_root, "test_o.json")
     target_no = os.path.join(data_root, "test_no.json")
 
-
     s_set = set()  # seen
-    ns_set = set() # unseen 
-    dic2tuple = lambda dic: (dic['subject'], dic['predicate'], dic['object'])
+    ns_set = set()  # unseen
     seen_cnt = 0
     unseen_cnt = 0
     with open(source, "r", encoding="utf-8") as s, open(
@@ -129,15 +132,35 @@ def split_test(data_root):
         for all_linenum, line in enumerate(s):
             jline = json.loads(line)
             spo_list = list(map(dic2tuple, jline["spo_list"]))
-            if any([spo in ns_set for spo in spo_list]): # any sop are in the unseen set
-                tseen.write(line)
-                s_set.update(spo_list)
+            if any([spo in s_set for spo in spo_list]):  # any spo are in the seen set
+                tseen.write(line)  # write seen line
+                s_set.update(spo_list)  # update seen set
                 seen_cnt += 1
-            else:
-                tnseen.write(line)
-                ns_set.update(spo_list)
+            else:  # all spo are not in unseen set
+                tnseen.write(line)  # write unseen test with line
+                s_set.update(spo_list)  # update unseen set with spos
                 unseen_cnt += 1
     print(seen_cnt, unseen_cnt)
+    return s_set, ns_set
+
+
+def split_train(data_root, s_set):
+    source = os.path.join(data_root, "new_train_data.json")
+    target_o = os.path.join(data_root, "train_o.json")
+    cnt = 0
+    with open(source, "r", encoding="utf-8") as s, open(
+        target_o, "w", encoding="utf-8"
+    ) as t:
+        for all_linenum, line in enumerate(s):
+            jline = json.loads(line)
+            spo_list = list(map(dic2tuple, jline["spo_list"]))
+            if all([spo in s_set for spo in spo_list]):  # any sop are in the seen set
+                cnt += 1
+                t.write(line)
+            else:
+                pass
+        print("train cnt", cnt)
+
 
 if __name__ == "__main__":
     nyt_list = [
