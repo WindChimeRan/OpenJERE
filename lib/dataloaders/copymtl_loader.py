@@ -68,10 +68,10 @@ class Copymtl_Dataset(Abstract_dataset):
     def seq2tensor(self, text, seq):
 
         NA = self.relation_vocab[NO_RELATION]
-        seq_list = [seq + [NA] + [0] * (self.hyper.max_decode_len - len(seq))]
+        seq_list = seq + [NA] + [0] * (self.hyper.max_decode_len - len(seq))
         seq_tensor = torch.LongTensor(seq_list)
         mask_list = (len(seq) + 1) * [True] + [False] * (
-            self.hyper.max_decode_len - len(seq) - 1
+            self.hyper.max_decode_len - len(seq)
         )
         mask_tensor = torch.BoolTensor(mask_list)
 

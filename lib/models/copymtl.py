@@ -66,7 +66,8 @@ class CopyMTL(ABCModel):
             )
             self.decoder = nn.LSTM(
                 hyper.emb_size,
-                hyper.hidden_size + hyper.bio_emb_size,
+                # hyper.hidden_size + hyper.bio_emb_size,
+                hyper.hidden_size,
                 bidirectional=False,
                 batch_first=True,
             )
@@ -93,9 +94,14 @@ class CopyMTL(ABCModel):
         self.rel_linear_b = nn.Linear(
             hyper.hidden_size + hyper.bio_emb_size, len(self.relation_vocab)
         )
+        self.relation_embedding = nn.Embedding(
+            len(self.relation_vocab) + 1, hyper.hidden_size
+        )
+
         self.combine_inputs = nn.Linear(
             hyper.hidden_size + hyper.emb_size, hyper.emb_size
         )
+        self.attn = nn.Linear(hyper.hidden_size * 2, 1)
 
         self.entity_linear_1 = nn.Linear(
             hyper.hidden_size * 3 + 3 * hyper.bio_emb_size, hyper.hidden_size
@@ -114,7 +120,8 @@ class CopyMTL(ABCModel):
         self.do_copy_linear = nn.Linear(100, 1)
 
         self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
-        self.ce = nn.CrossEntropyLoss(reduction="none")
+        # self.ce = nn.CrossEntropyLoss(reduction="none")
+        self.loss = nn.NLLLoss(reduction="none")
         self.metrics = F1_triplet()
         self.get_metric = self.metrics.get_metric
 
@@ -126,9 +133,9 @@ class CopyMTL(ABCModel):
         length = sample.length
         B = len(length)
 
-        if is_train:
-            seq_gold = sample.seq_id.cuda(self.gpu)
-            bio_gold = sample.bio_id.cuda(self.gpu)
+        # if is_train:
+        seq_gold = sample.seq_id.cuda(self.gpu)
+        bio_gold = sample.bio_id.cuda(self.gpu)
 
         text_list = sample.text
         # spo_gold = sample.spo_gold
@@ -141,15 +148,18 @@ class CopyMTL(ABCModel):
         o, h = self.encoder(embedded)
 
         o = (lambda a: sum(a) / 2)(torch.split(o, self.hyper.hidden_size, dim=2))
+        h = tuple(map(lambda state: sum(torch.split(state, 1, dim=0)) / 2, h))
 
         emi = self.emission(o)
 
-        output = {}
+        output_dic = {}
 
         crf_loss = 0
 
         if is_train:
             crf_loss = -self.tagger(emi, bio_gold, mask=mask, reduction="mean")
+            # print(crf_loss)
+            # exit()
         else:
             decoded_tag = self.tagger.decode(emissions=emi, mask=mask)
             temp_tag = copy.deepcopy(decoded_tag)
@@ -161,7 +171,8 @@ class CopyMTL(ABCModel):
 
         tag_emb = self.bio_emb(bio_gold)
 
-        cat_o = torch.cat((o, tag_emb), dim=2)
+        cat_o = o
+        # cat_o = torch.cat((o, tag_emb), dim=2)
 
         o_hid_size = cat_o.size(-1)
 
@@ -195,120 +206,65 @@ class CopyMTL(ABCModel):
         output = self.sos_embedding(go)
 
         # first_entity_mask = torch.ones(go.size()[0], self.maxlen).to(self.gpu)
-        if is_train:
-            # seq_gold = seq_gold.view(-1, 2 * self.hyper.max_decode_len + 1)
-            for t in range(self.hyper.max_decode_len):
+        # if is_train:
+        # seq_gold = seq_gold.view(-1, 2 * self.hyper.max_decode_len + 1)
+        for t in range(self.hyper.max_decode_len + 1):
 
-                bag, decoder_state = self._decode_step(
-                    self.decoder, output, decoder_state, cat_o
+            bag, decoder_state = self._decode_step(
+                self.decoder, output, decoder_state, cat_o
+            )
+            predict_logits, copy_logits = bag
+
+            if t % 3 == 0:
+                action_logits = predict_logits
+            else:
+                action_logits = copy_logits
+
+            max_action = torch.argmax(action_logits, dim=1).detach()
+
+            pred_action_list.append(max_action)
+            pred_logits_list.append(action_logits)
+
+            # next time step
+            if t % 3 == 0:
+                output = max_action
+                output = self.relation_embedding(output)
+
+            else:
+                copy_index = (
+                    torch.zeros_like(sentence)
+                    .scatter_(1, max_action.unsqueeze(1), 1)
+                    .bool()
                 )
-                predict_logits, copy_logits = bag
+                output = sentence[copy_index]
+                output = self.word_embeddings(output)
 
-                if t % 3 == 0:
-                    action_logits = predict_logits
-                else:
-                    action_logits = copy_logits
+            step_loss = self.masked_NLLloss(
+                mask_decode[:, t], action_logits, seq_gold[:, t]
+            )
 
-                max_action = torch.argmax(action_logits, dim=1).detach()
-
-                pred_action_list.append(max_action)
-                pred_logits_list.append(action_logits)
-
-                # next time step
-                if t % 3 == 0:
-                    output = max_action
-                    output = self.relation_embedding(output)
-
-                else:
-                    copy_index = (
-                        torch.zeros_like(sentence)
-                        .scatter_(1, max_action.unsqueeze(1), 1)
-                        .bool()
-                    )
-                    output = sentence[copy_index]
-                    output = self.word_embedding(output)
-
-                step_loss = self.masked_NLLloss(
-                    mask_decode[:, t], action_logits, seq_gold[:, t]
-                )
-
-                decoder_loss += step_loss.sum()
-                # if t % 3 == 1:
-                #     first_entity_mask = torch.ones(go.size()[0], self.maxlen + 1).to(self.device)
-
-                #     index = torch.zeros_like(first_entity_mask).scatter_(1, max_action.unsqueeze(1), 1).bool()
-
-                #     first_entity_mask[index] = 0
-                #     first_entity_mask = first_entity_mask[:, :-1]
-
-        #         decoder_input = decoder_input.squeeze()
-        #         decoder_output, h, output_logits = self._decode_step(
-        #             i, h, decoder_input, copy_o, fst_hidden
-        #         )
-
-        #         # use groundtruth
-        #         decoder_input = seq_gold[:, i]
-        #         if i % 2 == 0:
-        #             decoder_input = self.relation_emb(decoder_input)
-        #         else:
-
-        #             copy_index = (
-        #                 torch.zeros((B_stacked, L))
-        #                 .scatter_(1, decoder_input.unsqueeze(1).cpu(), 1)
-        #                 .bool()
-        #             )
-        #             decoder_input = self.cat_linear(self.activation(copy_o[copy_index]))
-
-        #         step_loss = self.masked_NLLloss(
-        #             mask_decode[:, :, i], output_logits, seq_gold[:, i]
-        #         )
-
-        #         decoder_loss += step_loss.sum()
-
-        #     # decoder_loss = decoder_loss / mask_decode.sum()
-        #     decoder_loss = decoder_loss / B
-        # # if evaluation
-        # else:
-
-        #     for i in range(self.hyper.max_decode_len * 2 + 1):
-
-        #         decoder_input = decoder_input.squeeze()
-        #         decoder_output, h, output_logits = self._decode_step(
-        #             i, h, decoder_input, copy_o, fst_hidden
-        #         )
-
-        #         # idx = torch.argmax(output_logits, dim=1).detach()
-        #         if i % 2 == 0:
-        #             idx = torch.argmax(output_logits, dim=1).detach()
-        #             decoder_input = self.relation_emb(idx)
-        #             decoder_result.append(idx.cpu())
-        #         else:
-        #             # TODO: mask
-        #             idx = torch.argmax(output_logits, dim=1).detach()
-        #             copy_index = (
-        #                 torch.zeros((B_stacked, L))
-        #                 .scatter_(1, idx.unsqueeze(1).cpu(), 1)
-        #                 .bool()
-        #             )
-        #             decoder_result.append(copy_index.long())
-        #             decoder_input = self.cat_linear(self.activation(copy_o[copy_index]))
+            # decoder_loss += step_loss.sum()
+            decoder_loss += step_loss
+            # print(step_loss.size())
 
         loss = crf_loss + decoder_loss
-        output["crf_loss"] = crf_loss
-        output["decoder_loss"] = decoder_loss
-        output["loss"] = loss
+        output_dic["crf_loss"] = crf_loss
+        output_dic["decoder_loss"] = decoder_loss
+        output_dic["loss"] = loss
 
-        output["description"] = partial(self.description, output=output)
-
+        output_dic["description"] = partial(self.description, output=output_dic)
+        # print(crf_loss)
+        # print(decoder_loss)
+        # exit()
         if not is_train:
             spo_gold = sample.spo_gold
-            output["spo_gold"] = spo_gold
+            output_dic["spo_gold"] = spo_gold
             decoder_result = self.decodeid2triplet(
                 decoder_result, tokens, bio_gold.tolist(), mask
             )
-            output["decode_result"] = decoder_result
+            output_dic["decode_result"] = decoder_result
 
-        return output
+        return output_dic
 
     def decodeid2triplet(self, decode_list, tokens, decoded_tag, mask):
         # 13 * 35 * 100
@@ -439,6 +395,18 @@ class CopyMTL(ABCModel):
 
         return attn_applied
 
+    def do_copy(
+        self, output: torch.Tensor, encoder_outputs: torch.Tensor
+    ) -> torch.Tensor:
+
+        out = torch.cat(
+            (output.unsqueeze(1).expand_as(encoder_outputs), encoder_outputs), dim=2
+        )
+        out = F.selu(self.fuse(F.selu(out)))
+        out = self.do_copy_linear(out).squeeze(2)
+        # out = (self.do_copy_linear(out).squeeze(2))
+        return out
+
     def _decode_step(
         self,
         rnn_cell: nn.modules,
@@ -464,9 +432,11 @@ class CopyMTL(ABCModel):
         eos_logits = self.do_eos(output)
         predict_logits = self.do_predict(output)
 
-        predict_logits = F.log_softmax(
-            torch.cat((predict_logits, eos_logits), dim=1), dim=1
-        )
+        # predict_logits = F.log_softmax(
+        #     torch.cat((predict_logits, eos_logits), dim=1), dim=1
+        # )
+
+        predict_logits = F.log_softmax(predict_logits, dim=1)
 
         copy_logits = self.do_copy(output, encoder_outputs)
 
@@ -475,7 +445,7 @@ class CopyMTL(ABCModel):
         # copy_logits = copy_logits * first_entity_mask
         # copy_logits = copy_logits
 
-        copy_logits = torch.cat((copy_logits, eos_logits), dim=1)
+        # copy_logits = torch.cat((copy_logits, eos_logits), dim=1)
         copy_logits = F.log_softmax(copy_logits, dim=1)
 
         # # bug fix
@@ -490,8 +460,10 @@ class CopyMTL(ABCModel):
         return (predict_logits, copy_logits), decoder_state
 
     def masked_NLLloss(self, mask, output_logits, seq_gold):
+        # print(output_logits.size(), seq_gold.size(), mask.size())
+        loss = (self.loss(output_logits, seq_gold) * mask).mean()
 
-        loss = self.ce(output_logits, seq_gold).masked_select(mask.view(-1))
+        # loss = self.loss(output_logits, seq_gold).masked_select(mask)
         return loss
 
     def run_metrics(self, output):

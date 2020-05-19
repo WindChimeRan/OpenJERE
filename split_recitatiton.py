@@ -96,14 +96,55 @@ def process_all(data_root):
 
 def nyt_pro(data_root, cnt):
     # nyt: 1, 2, 3, when freq <= 10
+    # filter_test_num(
+    #     data_root, "new_test_data.json", cnt, 10, 1, fn=lambda length: length == 1
+    # )
+    # filter_test_num(
+    #     data_root, "new_test_data.json", cnt, 10, 2, fn=lambda length: length == 2
+    # )
+    # filter_test_num(
+    #     data_root, "new_test_data.json", cnt, 10, 3, fn=lambda length: length >= 3
+    # )
     filter_test_num(
-        data_root, "new_test_data.json", cnt, 10, 1, fn=lambda length: length == 1
+        data_root,
+        "new_test_data.json",
+        cnt,
+        float("inf"),
+        1,
+        fn=lambda length: length == 1,
     )
     filter_test_num(
-        data_root, "new_test_data.json", cnt, 10, 2, fn=lambda length: length == 2
+        data_root,
+        "new_test_data.json",
+        cnt,
+        float("inf"),
+        2,
+        fn=lambda length: length == 2,
     )
     filter_test_num(
-        data_root, "new_test_data.json", cnt, 10, 3, fn=lambda length: length >= 3
+        data_root,
+        "new_test_data.json",
+        cnt,
+        float("inf"),
+        3,
+        fn=lambda length: length == 3,
+    )
+
+    filter_test_num(
+        data_root,
+        "new_test_data.json",
+        cnt,
+        float("inf"),
+        4,
+        fn=lambda length: length == 4,
+    )
+    filter_test_num(
+        data_root,
+        "new_test_data.json",
+        cnt,
+        float("inf"),
+        5,
+        fn=lambda length: length >= 4,
     )
 
 
@@ -166,11 +207,11 @@ if __name__ == "__main__":
     nyt_list = [
         "data/nyt/wdec",
         "data/nyt/seq2umt_pos",
-        # "data/nyt/multi_head_selection",
+        "data/nyt/multi_head_selection",
     ]
     cnt = cnt_train(nyt_list[1])
     for root in nyt_list:
-        # nyt_pro(root, cnt)
-        nyt_ab_test(root)
+        nyt_pro(root, cnt)
+        # nyt_ab_test(root)
     # for root in data_root_list:
     #     process_all(root)

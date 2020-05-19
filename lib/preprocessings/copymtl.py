@@ -9,7 +9,7 @@ from cached_property import cached_property
 from overrides import overrides
 
 from lib.preprocessings.abc_preprocessor import ABC_data_preprocessing
-from lib.config.const import find
+from lib.config.const import find, NO_RELATION
 
 
 class Copymtl_preprocessing(ABC_data_preprocessing):
@@ -58,13 +58,13 @@ class Copymtl_preprocessing(ABC_data_preprocessing):
         if len(self.hyper.tokenizer(text)) > self.hyper.max_text_len:
             return False
 
-        # if len(set([t['subject'] for t in spo_list])) > self.hyper.max_decode_len:
-        #     return False
-        if (
-            max(Counter([t["subject"] for t in spo_list]).values())
-            > self.hyper.max_decode_len
-        ):
+        if len(spo_list) > self.hyper.max_decode_len:
             return False
+        # if (
+        #     max(Counter([t["subject"] for t in spo_list]).values())
+        #     > self.hyper.max_decode_len
+        # ):
+        #     return False
 
         for t in spo_list:
             if t["object"] not in text or t["subject"] not in text:
@@ -93,6 +93,7 @@ class Copymtl_preprocessing(ABC_data_preprocessing):
             subject_pos = find(tokens, subject) + len(subject) - 1
             relation_pos = self.relation_vocab[triplet["predicate"]]
             result.extend([relation_pos, subject_pos, object_pos])
+        # result.append(self.relation_vocab[NO_RELATION])
         return result
 
     def spo_to_bio(self, text: str, entities: List[str]) -> List[str]:
