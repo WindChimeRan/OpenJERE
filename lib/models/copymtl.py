@@ -218,12 +218,22 @@ class CopyMTL(ABCModel):
 
             if t % 3 == 0:
                 action_logits = predict_logits
-            else:
-                action_logits = copy_logits - torch.zeros_like(
-                    copy_logits
-                ).masked_fill_(mask ^ True, -float("inf"))
+                max_action = torch.argmax(action_logits, dim=1).detach()
 
-            max_action = torch.argmax(action_logits, dim=1).detach()
+            else:
+                # action_logits = copy_logits + torch.zeros_like(
+                #     copy_logits
+                # ).masked_fill_(mask ^ True, -float("inf"))
+                action_logits = copy_logits
+                max_action = torch.argmax(
+                    action_logits
+                    + torch.zeros_like(copy_logits).masked_fill_(
+                        mask ^ True, -float("inf")
+                    ),
+                    dim=1,
+                ).detach()
+
+            # max_action = torch.argmax(action_logits, dim=1).detach()
 
             pred_action_list.append(max_action)
             pred_logits_list.append(action_logits)
