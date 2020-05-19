@@ -174,8 +174,8 @@ class Runner(object):
             self.hyper.vocab_init()
             self._init_model()
             # self.load_model(str(self.hyper.evaluation_epoch))
-            # self.load_model("best")
-            self.load_model("2")
+            self.load_model("best")
+            # self.load_model("2")
             test_set = self.Dataset(self.hyper, self.hyper.test)
             loader = self.Loader(
                 test_set,

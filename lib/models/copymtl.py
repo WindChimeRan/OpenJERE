@@ -208,6 +208,7 @@ class CopyMTL(ABCModel):
         # first_entity_mask = torch.ones(go.size()[0], self.maxlen).to(self.gpu)
         # if is_train:
         # seq_gold = seq_gold.view(-1, 2 * self.hyper.max_decode_len + 1)
+        actions = []
         for t in range(self.hyper.max_decode_len + 1):
 
             bag, decoder_state = self._decode_step(
@@ -218,7 +219,9 @@ class CopyMTL(ABCModel):
             if t % 3 == 0:
                 action_logits = predict_logits
             else:
-                action_logits = copy_logits
+                action_logits = copy_logits - torch.zeros_like(
+                    copy_logits
+                ).masked_fill_(mask ^ True, -float("inf"))
 
             max_action = torch.argmax(action_logits, dim=1).detach()
 
@@ -260,7 +263,7 @@ class CopyMTL(ABCModel):
             spo_gold = sample.spo_gold
             output_dic["spo_gold"] = spo_gold
             decoder_result = self.decodeid2triplet(
-                decoder_result, tokens, bio_gold.tolist(), mask
+                pred_action_list, sample.text, decoded_tag, mask
             )
             output_dic["decode_result"] = decoder_result
 
@@ -268,12 +271,15 @@ class CopyMTL(ABCModel):
 
     def decodeid2triplet(self, decode_list, tokens, decoded_tag, mask):
         # 13 * 35 * 100
-        text_len = self.hyper.max_text_len
-        B = decode_list[0].size(0) // text_len
+        # print(list(map(lambda x : x[0], (decode_list, tokens, decoded_tag, mask))))
+        # exit()
+        # text_len = self.hyper.max_text_len
+
+        # B = decode_list[0].size(0) // text_len
         decoded_tag = [[self.hyper.id2bio[t] for t in tt] for tt in decoded_tag]
-        tokens = [[self.hyper.id2word[t] for t in tt] for tt in tokens.tolist()]
-        result = [[] for i in range(B)]  # batch = 35
-        text_length = torch.sum(mask, dim=1).tolist()
+        # tokens = [[self.hyper.id2word[t] for t in tt] for tt in tokens.tolist()]
+        # result = [[] for i in range(B)]  # batch = 35
+        # text_length = torch.sum(mask, dim=1).tolist()
 
         def find_entity(pos: int, tag: List[str], text: List[str]) -> List[str]:
 
@@ -301,35 +307,48 @@ class CopyMTL(ABCModel):
             r = list(reversed(r))
             return r
 
-        for b in range(B):
-            for t in range(text_length[b]):
+        batch_size = decode_list[0].size(0)
+        result = [[] for i in range(batch_size)]  # batch = 35
+
+        decode_list = torch.stack(decode_list).permute(1, 0)
+        for b in range(batch_size):
+            triplet = {}
+            for t in range(self.hyper.max_decode_len + 1):
                 text = tokens[b]
                 tag = decoded_tag[b]
-                head_pos = t
-                head = find_entity(head_pos, tag, text)
-                head = self.hyper.join(head)
-                for i, step in enumerate(decode_list):
-                    if i % 2 == 0:  # rel
-                        # print('rel', step.size())
-                        # print(b, t)
-                        mat = step.view(B, text_len)
-                        rel = mat[b, t].item()
-                        rel = self.hyper.id2rel[rel]
-                        if rel == NO_RELATION:
-                            break
-                    else:  # ent
-                        # 3500 x 100 = 35 x 100 x 100
-                        # print('ent', step.size())
-                        mat = step.view(B, text_len, text_len)
-                        ent = mat[b, t].cpu()
+                seq = decode_list[b]
 
-                        assert torch.sum(ent) == 1
-                        tail_pos = torch.argmax(ent[: text_length[b]]).item()
-                        tail = find_entity(tail_pos, tag, text)
-                        tail = self.hyper.join(tail)
-                        triplet = {"subject": head, "predicate": rel, "object": tail}
-                        result[b].append(triplet)
+                # print(text, tag, seq)
+                # print(len(text))
+                # print(len(tag))
+                # exit()
 
+                if t % 3 == 0:  # rel
+                    rel = seq[t].item()
+                    rel = self.hyper.id2rel[rel]
+                    triplet["predicate"] = rel
+                    if rel == NO_RELATION:
+                        break
+                elif t % 3 == 1:  # ent
+                    head_pos = seq[t]
+                    # try:
+                    head = find_entity(head_pos, tag, text)
+                    # except:
+                    #     print(head_pos)
+                    #     print(tag)
+                    #     print(text)
+                    #     print(mask[b].tolist())
+                    #     print(mask[b].sum())
+                    #     exit()
+                    head = self.hyper.join(head)
+                    triplet["subject"] = head
+                elif t % 3 == 2:  # ent
+                    tail_pos = seq[t]
+                    tail = find_entity(tail_pos, tag, text)
+                    tail = self.hyper.join(tail)
+                    triplet["object"] = tail
+                    result[b].append(triplet)
+                    triplet = {}
         return result
 
     @staticmethod
