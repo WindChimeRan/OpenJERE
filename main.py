@@ -156,11 +156,11 @@ class Runner(object):
         self.model = p[name](self.hyper).cuda(self.gpu)
 
     def preprocessing(self):
-        self.preprocessor.gen_relation_vocab()
+        # self.preprocessor.gen_relation_vocab()
         self.preprocessor.gen_all_data()
-        self.preprocessor.gen_vocab(min_freq=2)
-        # for ner only
-        self.preprocessor.gen_bio_vocab()
+        # self.preprocessor.gen_vocab(min_freq=2)
+        # # for ner only
+        # self.preprocessor.gen_bio_vocab()
 
     def run(self, mode: str):
         if mode == "preprocessing":

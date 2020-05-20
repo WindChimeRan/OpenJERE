@@ -58,7 +58,7 @@ class Copymtl_preprocessing(ABC_data_preprocessing):
         if len(self.hyper.tokenizer(text)) > self.hyper.max_text_len:
             return False
 
-        if len(spo_list) > self.hyper.max_decode_len:
+        if len(spo_list) > 5:
             return False
         # if (
         #     max(Counter([t["subject"] for t in spo_list]).values())
