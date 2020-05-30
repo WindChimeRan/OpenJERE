@@ -7,10 +7,11 @@
 
 # Models
 
-a. Multi-Head-Selection [paper](https://arxiv.org/abs/1804.07847)
-b. CopyMTL [paper](https://arxiv.org/pdf/1911.10438.pdf)
-c. WDec [paper](https://128.84.21.199/pdf/1911.09886.pdf)
+* Multi-Head-Selection [paper](https://arxiv.org/abs/1804.07847)
+* CopyMTL [paper](https://arxiv.org/pdf/1911.10438.pdf)
+* WDec [paper](https://128.84.21.199/pdf/1911.09886.pdf)
 
+* Seq2UMTree
 
 # Run
 
