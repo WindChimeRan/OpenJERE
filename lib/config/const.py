@@ -1,4 +1,5 @@
 import time
+import torch
 from typing import Dict, List, Tuple, Set, Optional
 
 PAD = "<pad>"

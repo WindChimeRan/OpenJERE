@@ -51,7 +51,6 @@ from lib.models import (
     CopyMB,
     Twotagging,
     Seq2umt,
-    Threetagging,
     WDec,
     CopyMTL,
 )
@@ -135,7 +134,6 @@ class Runner(object):
             "copymb": Copymb_preprocessing(self.hyper),
             "twotagging": Twotagging_preprocessing(self.hyper),
             "seq2umt": Seq2umt_preprocessing(self.hyper),
-            "threetagging": Seq2umt_preprocessing(self.hyper),
             "wdec": WDec_preprocessing(self.hyper),
             "copymtl": Copymtl_preprocessing(self.hyper),
         }
@@ -149,7 +147,6 @@ class Runner(object):
             "copymb": CopyMB,
             "twotagging": Twotagging,
             "seq2umt": Seq2umt,
-            "threetagging": Seq2umt,
             "wdec": WDec,
             "copymtl": CopyMTL,
         }
