@@ -1,4 +1,3 @@
-# https://128.84.21.199/pdf/1911.09886.pdf
 # https://github.com/nusnlp/PtrNetDecoding4JERE
 import sys
 import os

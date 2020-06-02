@@ -14,52 +14,9 @@ from lib.metrics import F1_op, F1_os, F1_ps, F1_triplet
 from lib.models.abc_model import ABCModel
 
 from lib.layer import Attention, MaskedBCE
-
+from lib.config import seq_max_pool, seq_and_vec, seq_gather
 
 activation = F.gelu
-
-
-def seq_max_pool(x):
-    """seq是[None, seq_len, s_size]的格式，
-    mask是[None, seq_len, 1]的格式，先除去mask部分，
-    然后再做maxpooling。
-    """
-    seq, mask = x
-    seq = seq - (1 - mask) * 1e10
-    return torch.max(seq, 1)
-
-
-def seq_and_vec(x):
-    """seq是[None, seq_len, s_size]的格式，
-    vec是[None, v_size]的格式，将vec重复seq_len次，拼到seq上，
-    得到[None, seq_len, s_size+v_size]的向量。
-    """
-    seq, vec = x
-    vec = torch.unsqueeze(vec, 1)
-
-    vec = torch.zeros_like(seq[:, :, :1]) + vec
-    return torch.cat([seq, vec], 2)
-
-
-def seq_gather(x):
-    """seq是[None, seq_len, s_size]的格式，
-    idxs是[None, 1]的格式，在seq的第i个序列中选出第idxs[i]个向量，
-    最终输出[None, s_size]的向量。
-    """
-    seq, idxs = x
-    batch_idxs = torch.arange(0, seq.size(0)).cuda()
-
-    batch_idxs = torch.unsqueeze(batch_idxs, 1)
-
-    idxs = torch.cat([batch_idxs, idxs], 1)
-
-    res = []
-    for i in range(idxs.size(0)):
-        vec = seq[idxs[i][0], idxs[i][1], :]
-        res.append(torch.unsqueeze(vec, 0))
-
-    res = torch.cat(res)
-    return res
 
 
 class Seq2umt(ABCModel):

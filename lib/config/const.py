@@ -10,6 +10,45 @@ SEP_VERTICAL_BAR = "<|>"
 NO_RELATION = "<NA>"
 
 
+def seq_max_pool(x):
+    seq, mask = x
+    seq = seq - (1 - mask) * 1e10
+    return torch.max(seq, 1)
+
+
+def seq_and_vec(x):
+    """seq is [None, seq_len, s_size]
+    vec is [None, v_size] replicate vec by seq_len times, then concat to seq
+    outputs [None, seq_len, s_size+v_size]。
+    """
+    seq, vec = x
+    vec = torch.unsqueeze(vec, 1)
+
+    vec = torch.zeros_like(seq[:, :, :1]) + vec
+    return torch.cat([seq, vec], 2)
+
+
+def seq_gather(x):
+    """seq is [None, seq_len, s_size]
+    idxs is [None, 1], select idxs[i] vec，
+    output is [None, s_size]
+    """
+    seq, idxs = x
+    batch_idxs = torch.arange(0, seq.size(0)).cuda()
+
+    batch_idxs = torch.unsqueeze(batch_idxs, 1)
+
+    idxs = torch.cat([batch_idxs, idxs], 1)
+
+    res = []
+    for i in range(idxs.size(0)):
+        vec = seq[idxs[i][0], idxs[i][1], :]
+        res.append(torch.unsqueeze(vec, 0))
+
+    res = torch.cat(res)
+    return res
+
+
 def get_now_time():
     a = time.time()
     return time.ctime(a)
