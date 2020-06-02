@@ -16,7 +16,9 @@
 # Run
 
 
-Download the DuIE dataset from [Google Drive](https://drive.google.com/open?id=1NCwIc9-lMkKt5PxapnQy3sdRUnZiooq0)
+<!-- Download the DuIE dataset from [Google Drive](https://drive.google.com/open?id=1NCwIc9-lMkKt5PxapnQy3sdRUnZiooq0) -->
+
+Download the DuIE dataset from [official website](https://ai.baidu.com/broad/introduction?dataset=dureader)
 
 Unzip \*.json into ./raw_data/chinese/
 

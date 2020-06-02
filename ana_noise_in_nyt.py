@@ -158,12 +158,12 @@ def log_data(data_root):
 
     train, dev, test = read_data(ptrain, pdev, ptest, shuffle=False)
 
-    print(
-        data_root
-        + " "
-        + "dev triplet overlap train = %.2f"
-        % triplet_percentage_test_of_train(train, dev)
-    )
+    # print(
+    #     data_root
+    #     + " "
+    #     + "dev triplet overlap train = %.2f"
+    #     % triplet_percentage_test_of_train(train, dev)
+    # )
 
     print(
         data_root
@@ -172,46 +172,46 @@ def log_data(data_root):
         % triplet_percentage_test_of_train(train, test)
     )
 
-    print(
-        data_root
-        + " "
-        + "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev)
-    )
+    # print(
+    #     data_root
+    #     + " "
+    #     + "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev)
+    # )
 
-    print(
-        data_root
-        + " "
-        + "test text overlap train = %.2f" % text_percentage_test_of_train(train, test)
-    )
+    # print(
+    #     data_root
+    #     + " "
+    #     + "test text overlap train = %.2f" % text_percentage_test_of_train(train, test)
+    # )
 
-    print("turn on SHUFFULE")
-    train, dev, test = read_data(ptrain, pdev, ptest, shuffle=True)
+    # print("turn on SHUFFULE")
+    # train, dev, test = read_data(ptrain, pdev, ptest, shuffle=True)
 
-    print(
-        data_root
-        + " "
-        + "dev triplet overlap train = %.2f"
-        % triplet_percentage_test_of_train(train, dev)
-    )
+    # print(
+    #     data_root
+    #     + " "
+    #     + "dev triplet overlap train = %.2f"
+    #     % triplet_percentage_test_of_train(train, dev)
+    # )
 
-    print(
-        data_root
-        + " "
-        + "test triplet overlap train = %.2f"
-        % triplet_percentage_test_of_train(train, test)
-    )
+    # print(
+    #     data_root
+    #     + " "
+    #     + "test triplet overlap train = %.2f"
+    #     % triplet_percentage_test_of_train(train, test)
+    # )
 
-    print(
-        data_root
-        + " "
-        + "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev)
-    )
+    # print(
+    #     data_root
+    #     + " "
+    #     + "dev text overlap train = %.2f" % text_percentage_test_of_train(train, dev)
+    # )
 
-    print(
-        data_root
-        + " "
-        + "test text overlap train = %.2f" % text_percentage_test_of_train(train, test)
-    )
+    # print(
+    #     data_root
+    #     + " "
+    #     + "test text overlap train = %.2f" % text_percentage_test_of_train(train, test)
+    # )
 
 
 if __name__ == "__main__":
@@ -219,9 +219,10 @@ if __name__ == "__main__":
 
     chinese_data_root = "raw_data/chinese/"
 
+    log_data(nyt_data_root)
+    log_data(chinese_data_root)
     # log_data(nyt_data_root)
-    # log_data(nyt_data_root)
-    log_order(chinese_data_root)
+    # log_order(chinese_data_root)
 
     """
     length of the datasets train 56196       dev 5000        test 5000
