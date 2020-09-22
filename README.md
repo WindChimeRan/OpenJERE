@@ -1,5 +1,7 @@
 # OpenJREE: Joint Relations and Entities Extraction
 
+This is for EMNLP2020 findings paper: [Minimize Exposure Bias of Seq2Seq Models in Joint Entity and Relation Extraction](https://arxiv.org/pdf/2009.07503.pdf)
+
 # Requirement
 
 * python 3.7
@@ -11,7 +13,13 @@
 * CopyMTL [paper](https://arxiv.org/pdf/1911.10438.pdf)
 * WDec [paper](https://128.84.21.199/pdf/1911.09886.pdf)
 
-* Seq2UMTree
+* Seq2UMTree [paper](https://arxiv.org/pdf/2009.07503.pdf)
+
+# Install
+
+```sh
+pip install -e .
+```
 
 # Run
 
