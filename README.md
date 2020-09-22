@@ -4,8 +4,12 @@ This is for EMNLP2020 findings paper: [Minimize Exposure Bias of Seq2Seq Models 
 
 # Requirement
 
-* python 3.7
-* pytorch 1.5
+* python 3.7/3.8
+* pytorch 1.6
+
+```sh
+pip install -r requirements.txt
+```
 
 # Models
 

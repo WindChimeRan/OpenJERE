@@ -22,7 +22,7 @@ from collections import Counter
 
 from torch.optim import Adam, SGD
 
-from lib.preprocessings import (
+from openjere.preprocessings import (
     Selection_preprocessing,
     Copymb_preprocessing,
     Twotagging_preprocessing,
@@ -31,7 +31,7 @@ from lib.preprocessings import (
     Copymtl_preprocessing,
 )
 
-from lib.dataloaders import (
+from openjere.dataloaders import (
     Selection_Dataset,
     Selection_loader,
     Copymb_Dataset,
@@ -45,8 +45,8 @@ from lib.dataloaders import (
     Copymtl_Dataset,
     Copymtl_loader,
 )
-from lib.metrics import F1_triplet
-from lib.models import (
+from openjere.metrics import F1_triplet
+from openjere.models import (
     MultiHeadSelection,
     CopyMB,
     Twotagging,
@@ -54,7 +54,7 @@ from lib.models import (
     WDec,
     CopyMTL,
 )
-from lib.config import Hyper
+from openjere.config import Hyper
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

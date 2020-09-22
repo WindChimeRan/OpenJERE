@@ -1,0 +1,6 @@
+README.md
+setup.py
+openjere.egg-info/PKG-INFO
+openjere.egg-info/SOURCES.txt
+openjere.egg-info/dependency_links.txt
+openjere.egg-info/top_level.txt
