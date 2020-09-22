@@ -120,6 +120,7 @@ class MultiHeadSelection(ABCModel):
 
     def forward(self, sample, is_train: bool) -> Dict[str, torch.Tensor]:
 
+        # BEGIN encoder
         tokens = sample.tokens_id.cuda(self.gpu)
         selection_gold = sample.selection_id.cuda(self.gpu)
         bio_gold = sample.bio_id.cuda(self.gpu)
@@ -133,6 +134,7 @@ class MultiHeadSelection(ABCModel):
         o, h = self.encoder(embedded)
 
         o = (lambda a: sum(a) / 2)(torch.split(o, self.hyper.hidden_size, dim=2))
+        # END encoder
 
         emi = self.emission(o)
 
