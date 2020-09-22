@@ -24,7 +24,6 @@ from torch.optim import Adam, SGD
 
 from openjere.preprocessings import (
     Selection_preprocessing,
-    Copymb_preprocessing,
     Twotagging_preprocessing,
     Seq2umt_preprocessing,
     WDec_preprocessing,
@@ -34,8 +33,6 @@ from openjere.preprocessings import (
 from openjere.dataloaders import (
     Selection_Dataset,
     Selection_loader,
-    Copymb_Dataset,
-    Copymb_loader,
     Twotagging_Dataset,
     Twotagging_loader,
     Seq2umt_Dataset,
@@ -48,7 +45,6 @@ from openjere.dataloaders import (
 from openjere.metrics import F1_triplet
 from openjere.models import (
     MultiHeadSelection,
-    CopyMB,
     Twotagging,
     Seq2umt,
     WDec,
@@ -100,7 +96,6 @@ class Runner(object):
 
         dataset_dic = {
             "selection": Selection_Dataset,
-            "copymb": Copymb_Dataset,
             "twotagging": Twotagging_Dataset,
             "seq2umt": Seq2umt_Dataset,
             "wdec": WDec_Dataset,
@@ -109,7 +104,6 @@ class Runner(object):
 
         loader_dic = {
             "selection": Selection_loader,
-            "copymb": Copymb_loader,
             "twotagging": Twotagging_loader,
             "seq2umt": Seq2umt_loader,
             "wdec": WDec_loader,
@@ -131,7 +125,6 @@ class Runner(object):
     def _preprocessor(self, name: str):
         p = {
             "selection": Selection_preprocessing(self.hyper),
-            "copymb": Copymb_preprocessing(self.hyper),
             "twotagging": Twotagging_preprocessing(self.hyper),
             "seq2umt": Seq2umt_preprocessing(self.hyper),
             "wdec": WDec_preprocessing(self.hyper),
@@ -144,7 +137,6 @@ class Runner(object):
         name = self.hyper.model
         p = {
             "selection": MultiHeadSelection,
-            "copymb": CopyMB,
             "twotagging": Twotagging,
             "seq2umt": Seq2umt,
             "wdec": WDec,

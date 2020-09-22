@@ -22,8 +22,7 @@ class Hyper(object):
         self.print_epoch: int
         self.evaluation_epoch: int
         self.max_text_len: int
-        # max_decode_len for copymb is per-token wise
-        #                for copyre is per-sentence wise
+
         self.order: List[str]
         self.max_decode_len: Optional[int]
         self.max_encode_len: Optional[int]

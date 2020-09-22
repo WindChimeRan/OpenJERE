@@ -1,5 +1,4 @@
 from openjere.dataloaders.selection_loader import Selection_Dataset, Selection_loader
-from openjere.dataloaders.copymb_loader import Copymb_Dataset, Copymb_loader
 from openjere.dataloaders.twotagging_loader import Twotagging_Dataset, Twotagging_loader
 from openjere.dataloaders.seq2umt_loader import Seq2umt_Dataset, Seq2umt_loader
 
