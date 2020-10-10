@@ -441,7 +441,7 @@ class Decoder(nn.Module):
         return t1_out, t2_out, t3_out
 
     def test_forward(self, sample, encoder_o, decoder_h) -> List[List[Dict[str, str]]]:
-        text_id = sample.T.cuda(self.gpu)
+        text_id = sample.tokens_id.cuda(self.gpu)
         mask = (
             torch.gt(torch.unsqueeze(text_id, 2), 0).float().cuda(self.gpu)
         )  # (batch_size,sent_len,1)
