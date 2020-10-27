@@ -8,7 +8,7 @@ chardet==3.0.4
 click==7.1.2
 conda==4.8.5
 conda-package-handling==1.7.0
-cryptography==2.9.2
+cryptography==3.2
 idna==2.9
 mkl-fft==1.2.0
 mkl-random==1.1.1
